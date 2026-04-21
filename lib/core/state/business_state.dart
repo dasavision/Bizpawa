@@ -1,10 +1,21 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:bizpawa/models/product.dart';
+import 'package:bizpawa/models/stock_batch.dart';
+import 'package:bizpawa/models/sale_entry.dart';
+import 'package:bizpawa/models/customer.dart';
+import 'package:bizpawa/models/expense.dart';
+import 'package:bizpawa/models/supplier.dart';
+import 'package:bizpawa/models/app_note.dart';
 import 'package:bizpawa/models/sale_order.dart';
 import 'package:bizpawa/models/sale_item.dart';
-import 'package:bizpawa/models/stock_batch.dart';
 import 'package:bizpawa/models/order_item.dart';
+
+export 'package:bizpawa/models/sale_entry.dart';
+export 'package:bizpawa/models/customer.dart';
+export 'package:bizpawa/models/expense.dart';
+export 'package:bizpawa/models/supplier.dart';
+export 'package:bizpawa/models/app_note.dart';
 
 enum SalesFilter { today, week, custom }
 
@@ -60,13 +71,6 @@ class BusinessState extends ChangeNotifier {
     } catch (_) {
       return null;
     }
-  }
-
-  /// ================== DASHBOARD ==================
-  int get todaySales {
-    return _salesHistory
-        .where((s) => _isSameDay(s.date, DateTime.now()))
-        .fold<int>(0, (sum, s) => sum + s.paidAmount);
   }
 
   /// ================== SALES (Order-based) ==================
@@ -231,7 +235,7 @@ class BusinessState extends ChangeNotifier {
 
   /// ================== ORDER NUMBER ==================
   String generateOrderNumber() {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random();
     final part = List.generate(5, (_) => chars[random.nextInt(chars.length)]).join();
     return 'BIZ$part';
@@ -241,13 +245,12 @@ class BusinessState extends ChangeNotifier {
   final List<SaleEntry> _salesHistory = [];
   List<SaleEntry> get salesHistory => _salesHistory;
 
-  // ✅ FIX: sellerName parameter imeongezwa — inatumia jina halisi la mtumiaji
   void recordOrder({
     required List<OrderItem> items,
     required int discount,
     required DateTime date,
     required bool paid,
-    String sellerName = 'Admin', // ← FIX: parameter badala ya hardcoded
+    String sellerName = 'Admin',
     String? customerName,
     String? customerPhone,
     String? note,
@@ -301,7 +304,7 @@ class BusinessState extends ChangeNotifier {
         paidAmount: paid ? finalAmount : 0,
         customerName: customerName,
         customerPhone: customerPhone,
-        sellerName: sellerName, // ← FIX: sasa inatumia jina halisi
+        sellerName: sellerName,
         discount: discount,
         note: note,
         paymentMethod: paymentMethod,
@@ -309,7 +312,6 @@ class BusinessState extends ChangeNotifier {
         totalCogs: totalCogs,
       ),
     );
-
     notifyListeners();
   }
 
@@ -319,7 +321,7 @@ class BusinessState extends ChangeNotifier {
     required int discount,
     required DateTime date,
     required bool paid,
-    String sellerName = 'Admin', // ← FIX pia hapa
+    String sellerName = 'Admin',
   }) {
     if (product.unit != 'SERVICE' && quantity > product.stock) return;
     if (product.unit != 'SERVICE') product.stock -= quantity;
@@ -337,7 +339,7 @@ class BusinessState extends ChangeNotifier {
         paid: paid,
         paidAmount: paid ? amount : 0,
         totalCogs: cogs,
-        sellerName: sellerName, // ← FIX
+        sellerName: sellerName,
         items: [
           SaleItemEntry(
             productId: product.id,
@@ -393,7 +395,6 @@ class BusinessState extends ChangeNotifier {
       refundAmount: sale.refundAmount,
       totalCogs: sale.totalCogs,
     );
-
     notifyListeners();
   }
 
@@ -548,6 +549,11 @@ class BusinessState extends ChangeNotifier {
 
   int get todayExpenses => expensesForDay(DateTime.now());
   int get todayNetProfit => netProfitForDay(DateTime.now());
+  int get todaySales {
+    return _salesHistory
+        .where((s) => _isSameDay(s.date, DateTime.now()))
+        .fold<int>(0, (sum, s) => sum + s.paidAmount);
+  }
 
   Map<String, int> get expensesByCategory {
     final map = <String, int>{};
@@ -612,7 +618,7 @@ class BusinessState extends ChangeNotifier {
 
   int get totalStockValue => totalSellingStockValue;
 
-  /// ================== SELLERS ==================
+  /// ================== SELLERS (legacy) ==================
   final List<Seller> _sellers = [];
   List<Seller> get sellers => _sellers;
 
@@ -666,7 +672,6 @@ class BusinessState extends ChangeNotifier {
       paidAmount: supplier.paidAmount + amount,
       payments: [...supplier.payments, payment],
     );
-
     notifyListeners();
   }
 
@@ -691,127 +696,9 @@ class BusinessState extends ChangeNotifier {
     _notes.removeWhere((n) => n.id == id);
     notifyListeners();
   }
-
-} // ← MWISHO WA BusinessState CLASS
-
-/// ================== MODELS ==================
-
-class DebtPayment {
-  final String id;
-  final int amount;
-  final String paymentMethod;
-  final DateTime date;
-
-  DebtPayment({
-    required this.id,
-    required this.amount,
-    required this.paymentMethod,
-    required this.date,
-  });
 }
 
-class Expense {
-  final String id;
-  final String category;
-  final int amount;
-  final DateTime date;
-  final String recordedBy;
-  final String? note;
-
-  Expense({
-    required this.id,
-    required this.category,
-    required this.amount,
-    required this.date,
-    this.recordedBy = 'Admin',
-    this.note,
-  });
-}
-
-class Customer {
-  final String id;
-  String name;
-  String phone;
-  String? email;
-  String? address;
-
-  Customer({
-    required this.id,
-    required this.name,
-    required this.phone,
-    this.email,
-    this.address,
-  });
-}
-
-class SaleItemEntry {
-  final String productId;
-  final String productName;
-  final String unit;
-  final int quantity;
-  final int sellingPrice;
-  final int buyingPrice;
-
-  SaleItemEntry({
-    required this.productId,
-    required this.productName,
-    required this.unit,
-    required this.quantity,
-    required this.sellingPrice,
-    this.buyingPrice = 0,
-  });
-
-  int get subtotal => quantity * sellingPrice;
-  int get cogs => quantity * buyingPrice;
-  int get grossProfit => subtotal - cogs;
-}
-
-class SaleEntry {
-  final String orderNumber;
-  final String productName;
-  final int amount;
-  final DateTime date;
-  final bool paid;
-  final int paidAmount;
-  final String? customerName;
-  final String? customerPhone;
-  final String sellerName;
-  final int discount;
-  final String? note;
-  final String? paymentMethod;
-  final List<SaleItemEntry> items;
-  final List<DebtPayment> payments;
-  final bool isRefunded;
-  final int refundAmount;
-  final int totalCogs;
-
-  SaleEntry({
-    required this.orderNumber,
-    required this.productName,
-    required this.amount,
-    required this.date,
-    required this.paid,
-    this.paidAmount = 0,
-    this.customerName,
-    this.customerPhone,
-    this.sellerName = 'Admin',
-    this.discount = 0,
-    this.note,
-    this.paymentMethod,
-    this.items = const [],
-    this.payments = const [],
-    this.isRefunded = false,
-    this.refundAmount = 0,
-    this.totalCogs = 0,
-  });
-
-  int get remainingAmount => amount - paidAmount;
-  double get paymentProgress =>
-      amount == 0 ? 1.0 : (paidAmount / amount).clamp(0.0, 1.0);
-  bool get hasPartialRefund => refundAmount > 0 && !isRefunded;
-  int get grossProfit => amount - totalCogs;
-}
-
+// ===== Seller class (legacy — itabadilishwa na AppUser) =====
 class Seller {
   final String id;
   final String name;
@@ -823,94 +710,5 @@ class Seller {
     required this.name,
     required this.phone,
     this.role,
-  });
-}
-
-class SupplierPayment {
-  final String id;
-  final int amount;
-  final String method;
-  final DateTime date;
-
-  SupplierPayment({
-    required this.id,
-    required this.amount,
-    required this.method,
-    required this.date,
-  });
-}
-
-class Supplier {
-  final String id;
-  final String name;
-  final String phone;
-  final String businessName;
-  final int totalDebt;
-  final int paidAmount;
-  final List<SupplierPayment> payments;
-
-  Supplier({
-    required this.id,
-    required this.name,
-    required this.phone,
-    required this.businessName,
-    required this.totalDebt,
-    required this.paidAmount,
-    this.payments = const [],
-  });
-
-  int get remainingDebt => totalDebt - paidAmount;
-}
-
-class RefundItem {
-  final String productId;
-  final String productName;
-  final String unit;
-  final int quantity;
-  final int sellingPrice;
-  final int buyingPrice;
-
-  RefundItem({
-    required this.productId,
-    required this.productName,
-    required this.unit,
-    required this.quantity,
-    required this.sellingPrice,
-    this.buyingPrice = 0,
-  });
-
-  int get subtotal => quantity * sellingPrice;
-  int get cogs => quantity * buyingPrice;
-}
-
-class RefundEntry {
-  final String id;
-  final String originalOrderNumber;
-  final List<RefundItem> items;
-  final int refundAmount;
-  final DateTime date;
-  final String reason;
-
-  RefundEntry({
-    required this.id,
-    required this.originalOrderNumber,
-    required this.items,
-    required this.refundAmount,
-    required this.date,
-    required this.reason,
-  });
-}
-
-class AppNote {
-  final String id;
-  final String title;
-  final String content;
-  final DateTime createdAt;
-
-  AppNote({
-    required this.id,
-    required this.title,
-    required this.content,
-    required this.createdAt,
   });
 }

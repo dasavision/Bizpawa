@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'business_type_page.dart';
 
 const _kNavy = Color(0xFF1B2E6B);
-const _kOrange = Color(0xFFF5A623);
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});

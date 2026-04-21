@@ -5,6 +5,7 @@ import 'package:bizpawa/core/state/business_state.dart';
 import 'package:bizpawa/core/state/auth_state.dart';
 import 'package:bizpawa/core/services/notification_service.dart';
 import 'package:bizpawa/features/auth/login_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 const kNavyBlue = Color(0xFF1B2E6B);
 const kOrange = Color(0xFFF5A623);
@@ -459,13 +460,13 @@ class _DashboardPageState extends State<DashboardPage> {
           ElevatedButton.icon(
             icon: const Icon(Icons.call),
             label: const Text('Piga Simu'),
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Inaungana na +255 753 412 681...'),
-                backgroundColor: kNavyBlue,
-              ));
-            },
+            onPressed: () async {
+  Navigator.pop(context);
+  final uri = Uri(scheme: 'tel', path: '+255753412681');
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri);
+  }
+},
           ),
         ],
       ),

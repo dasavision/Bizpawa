@@ -366,7 +366,7 @@ class _EditProductPageState extends State<EditProductPage> {
               _label('Kundi la Bidhaa'),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                value: _selectedKundi,
+                initialValue: _selectedKundi,
                 decoration: _inputDec(''),
                 items: makundi
                     .map((k) => DropdownMenuItem(
@@ -397,7 +397,7 @@ class _EditProductPageState extends State<EditProductPage> {
                 _label('Unit / Packaging'),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  value: _selectedUnit,
+                  initialValue: _selectedUnit,
                   decoration: _inputDec(''),
                   items: _units
                       .map((u) => DropdownMenuItem(

@@ -1,184 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:bizpawa/models/app_user.dart';
 
-enum UserRole { admin, seller }
-
-class SellerPermissions {
-  // MAUZO
-  final bool canRecordSales;
-  final bool canDeleteOwnSales;
-  final bool canViewOtherSales;
-  final bool canDeleteOtherSales;
-  final bool canBackdateSales;
-  final bool canDeleteBackdatedSales;
-  final bool canRefund;
-
-  // BIDHAA
-  final bool canViewProducts;
-  final bool canAddProduct;
-  final bool canAddStock;
-  final bool canViewBuyingPrice;
-  final bool canDeleteProduct;
-  final bool canEditProductPrice;
-  final bool canEditProductInfo;
-  final bool canViewProductHistory;
-
-  // MADENI
-  final bool canPayDebt;
-  final bool canViewAllDebts;
-
-  // MATUMIZI
-  final bool canRecordExpenses;
-  final bool canDeleteOwnExpenses;
-  final bool canViewOtherExpenses;
-  final bool canDeleteOtherExpenses;
-  final bool canDeleteBackdatedExpenses;
-
-  // RIPOTI
-  final bool canViewDailyReport;
-  final bool canViewSalesReport;
-  final bool canViewDebtReport;
-  final bool canViewProductReport;
-  final bool canViewExpenseReport;
-  final bool canViewProfitReport;
-  final bool canViewCustomerReport;
-
-  // ANALYTICS
-  final bool canViewSalesAnalytics;
-  final bool canViewProfitAnalytics;
-  final bool canViewProductAnalytics;
-  final bool canViewExpenseAnalytics;
-  final bool canViewCustomerAnalytics;
-
-  const SellerPermissions({
-    this.canRecordSales = false,
-    this.canDeleteOwnSales = false,
-    this.canViewOtherSales = false,
-    this.canDeleteOtherSales = false,
-    this.canBackdateSales = false,
-    this.canDeleteBackdatedSales = false,
-    this.canRefund = false,
-    this.canViewProducts = false,
-    this.canAddProduct = false,
-    this.canAddStock = false,
-    this.canViewBuyingPrice = false,
-    this.canDeleteProduct = false,
-    this.canEditProductPrice = false,
-    this.canEditProductInfo = false,
-    this.canViewProductHistory = false,
-    this.canPayDebt = false,
-    this.canViewAllDebts = false,
-    this.canRecordExpenses = false,
-    this.canDeleteOwnExpenses = false,
-    this.canViewOtherExpenses = false,
-    this.canDeleteOtherExpenses = false,
-    this.canDeleteBackdatedExpenses = false,
-    this.canViewDailyReport = false,
-    this.canViewSalesReport = false,
-    this.canViewDebtReport = false,
-    this.canViewProductReport = false,
-    this.canViewExpenseReport = false,
-    this.canViewProfitReport = false,
-    this.canViewCustomerReport = false,
-    this.canViewSalesAnalytics = false,
-    this.canViewProfitAnalytics = false,
-    this.canViewProductAnalytics = false,
-    this.canViewExpenseAnalytics = false,
-    this.canViewCustomerAnalytics = false,
-  });
-
-  SellerPermissions copyWith({
-    bool? canRecordSales, bool? canDeleteOwnSales, bool? canViewOtherSales,
-    bool? canDeleteOtherSales, bool? canBackdateSales, bool? canDeleteBackdatedSales,
-    bool? canRefund, bool? canViewProducts, bool? canAddProduct, bool? canAddStock,
-    bool? canViewBuyingPrice, bool? canDeleteProduct, bool? canEditProductPrice,
-    bool? canEditProductInfo, bool? canViewProductHistory, bool? canPayDebt,
-    bool? canViewAllDebts, bool? canRecordExpenses, bool? canDeleteOwnExpenses,
-    bool? canViewOtherExpenses, bool? canDeleteOtherExpenses,
-    bool? canDeleteBackdatedExpenses, bool? canViewDailyReport,
-    bool? canViewSalesReport, bool? canViewDebtReport, bool? canViewProductReport,
-    bool? canViewExpenseReport, bool? canViewProfitReport, bool? canViewCustomerReport,
-    bool? canViewSalesAnalytics, bool? canViewProfitAnalytics,
-    bool? canViewProductAnalytics, bool? canViewExpenseAnalytics,
-    bool? canViewCustomerAnalytics,
-  }) {
-    return SellerPermissions(
-      canRecordSales: canRecordSales ?? this.canRecordSales,
-      canDeleteOwnSales: canDeleteOwnSales ?? this.canDeleteOwnSales,
-      canViewOtherSales: canViewOtherSales ?? this.canViewOtherSales,
-      canDeleteOtherSales: canDeleteOtherSales ?? this.canDeleteOtherSales,
-      canBackdateSales: canBackdateSales ?? this.canBackdateSales,
-      canDeleteBackdatedSales: canDeleteBackdatedSales ?? this.canDeleteBackdatedSales,
-      canRefund: canRefund ?? this.canRefund,
-      canViewProducts: canViewProducts ?? this.canViewProducts,
-      canAddProduct: canAddProduct ?? this.canAddProduct,
-      canAddStock: canAddStock ?? this.canAddStock,
-      canViewBuyingPrice: canViewBuyingPrice ?? this.canViewBuyingPrice,
-      canDeleteProduct: canDeleteProduct ?? this.canDeleteProduct,
-      canEditProductPrice: canEditProductPrice ?? this.canEditProductPrice,
-      canEditProductInfo: canEditProductInfo ?? this.canEditProductInfo,
-      canViewProductHistory: canViewProductHistory ?? this.canViewProductHistory,
-      canPayDebt: canPayDebt ?? this.canPayDebt,
-      canViewAllDebts: canViewAllDebts ?? this.canViewAllDebts,
-      canRecordExpenses: canRecordExpenses ?? this.canRecordExpenses,
-      canDeleteOwnExpenses: canDeleteOwnExpenses ?? this.canDeleteOwnExpenses,
-      canViewOtherExpenses: canViewOtherExpenses ?? this.canViewOtherExpenses,
-      canDeleteOtherExpenses: canDeleteOtherExpenses ?? this.canDeleteOtherExpenses,
-      canDeleteBackdatedExpenses: canDeleteBackdatedExpenses ?? this.canDeleteBackdatedExpenses,
-      canViewDailyReport: canViewDailyReport ?? this.canViewDailyReport,
-      canViewSalesReport: canViewSalesReport ?? this.canViewSalesReport,
-      canViewDebtReport: canViewDebtReport ?? this.canViewDebtReport,
-      canViewProductReport: canViewProductReport ?? this.canViewProductReport,
-      canViewExpenseReport: canViewExpenseReport ?? this.canViewExpenseReport,
-      canViewProfitReport: canViewProfitReport ?? this.canViewProfitReport,
-      canViewCustomerReport: canViewCustomerReport ?? this.canViewCustomerReport,
-      canViewSalesAnalytics: canViewSalesAnalytics ?? this.canViewSalesAnalytics,
-      canViewProfitAnalytics: canViewProfitAnalytics ?? this.canViewProfitAnalytics,
-      canViewProductAnalytics: canViewProductAnalytics ?? this.canViewProductAnalytics,
-      canViewExpenseAnalytics: canViewExpenseAnalytics ?? this.canViewExpenseAnalytics,
-      canViewCustomerAnalytics: canViewCustomerAnalytics ?? this.canViewCustomerAnalytics,
-    );
-  }
-}
-
-class AppUser {
-  final String id;
-  final String name;
-  final String phone;
-  final String username;
-  final String pin;
-  final UserRole role;
-  final SellerPermissions permissions;
-  final bool mustChangePinOnFirstLogin;
-  final DateTime createdAt;
-
-  AppUser({
-    required this.id,
-    required this.name,
-    required this.phone,
-    required this.username,
-    required this.pin,
-    required this.role,
-    this.permissions = const SellerPermissions(),
-    this.mustChangePinOnFirstLogin = false,
-    required this.createdAt,
-  });
-
-  bool get isAdmin => role == UserRole.admin;
-
-  AppUser copyWith({
-    String? pin,
-    SellerPermissions? permissions,
-    bool? mustChangePinOnFirstLogin,
-  }) {
-    return AppUser(
-      id: id, name: name, phone: phone, username: username,
-      pin: pin ?? this.pin, role: role,
-      permissions: permissions ?? this.permissions,
-      mustChangePinOnFirstLogin: mustChangePinOnFirstLogin ?? this.mustChangePinOnFirstLogin,
-      createdAt: createdAt,
-    );
-  }
-}
+export 'package:bizpawa/models/app_user.dart' show
+    AppUser, UserRole, SellerPermissions;
 
 class AuthState extends ChangeNotifier {
   AppUser? _currentUser;
@@ -186,6 +11,9 @@ class AuthState extends ChangeNotifier {
   bool _hasSeenOnboarding = false;
   AppUser? _adminUser;
   final List<AppUser> _sellers = [];
+
+  late final Box _authBox;
+  late final Box<AppUser> _sellersBox;
 
   AppUser? get currentUser => _currentUser;
   bool get isRegistered => _isRegistered;
@@ -197,9 +25,59 @@ class AuthState extends ChangeNotifier {
   SellerPermissions get permissions =>
       _currentUser?.permissions ?? const SellerPermissions();
 
+  // ===== INITIALIZE — Load data kutoka Hive =====
+  Future<void> init() async {
+    _authBox = Hive.box('auth');
+    _sellersBox = Hive.box<AppUser>('sellers');
+
+    // Load onboarding flag
+    _hasSeenOnboarding = _authBox.get('hasSeenOnboarding', defaultValue: false);
+
+    // Load admin user
+    final adminData = _authBox.get('adminUser');
+    if (adminData != null) {
+      _adminUser = adminData as AppUser;
+      _isRegistered = true;
+    }
+
+    // Load sellers
+    _sellers.clear();
+    _sellers.addAll(_sellersBox.values);
+
+    // Load current user aliyekuwa ameingia — Remember Me
+    final currentUserId = _authBox.get('currentUserId');
+    if (currentUserId != null) {
+      if (currentUserId == 'admin_001' && _adminUser != null) {
+        _currentUser = _adminUser;
+      } else {
+        try {
+          _currentUser = _sellers.firstWhere((s) => s.id == currentUserId);
+        } catch (_) {}
+      }
+    }
+  }
+
+  // ===== SAVE HELPERS =====
+  Future<void> _saveAdmin() async {
+    await _authBox.put('adminUser', _adminUser);
+    await _authBox.put('isRegistered', _isRegistered);
+  }
+
+  Future<void> _saveSellers() async {
+    await _sellersBox.clear();
+    for (final seller in _sellers) {
+      await _sellersBox.put(seller.id, seller);
+    }
+  }
+
+  Future<void> _saveOnboarding() async {
+    await _authBox.put('hasSeenOnboarding', _hasSeenOnboarding);
+  }
+
   // ===== ONBOARDING =====
   void completeOnboarding() {
     _hasSeenOnboarding = true;
+    _saveOnboarding();
     notifyListeners();
   }
 
@@ -209,11 +87,11 @@ class AuthState extends ChangeNotifier {
     required String phone,
     required String pin,
   }) {
-    _adminUser = AppUser(
+    _adminUser = AppUser.withRole(
       id: 'admin_001',
       name: name,
       phone: phone,
-      username: 'admin', // default username
+      username: 'admin',
       pin: pin,
       role: UserRole.admin,
       permissions: const SellerPermissions(),
@@ -221,18 +99,20 @@ class AuthState extends ChangeNotifier {
     );
     _isRegistered = true;
     _currentUser = _adminUser;
+    _authBox.put('currentUserId', _currentUser!.id);
+    _saveAdmin();
     notifyListeners();
   }
 
   // ===== LOGIN — Admin kwa namba ya simu + PIN =====
   bool loginAdmin(String phone, String pin) {
     if (_adminUser == null) return false;
-    // Normalize phone — ondoa +255 au 0 mwanzoni
     final normalizedInput = _normalizePhone(phone);
     final normalizedStored = _normalizePhone(_adminUser!.phone);
     if (normalizedInput != normalizedStored) return false;
     if (_adminUser!.pin != pin) return false;
     _currentUser = _adminUser;
+    _authBox.put('currentUserId', _currentUser!.id);
     notifyListeners();
     return true;
   }
@@ -245,6 +125,7 @@ class AuthState extends ChangeNotifier {
       );
       if (seller.pin != pin) return false;
       _currentUser = seller;
+      _authBox.put('currentUserId', _currentUser!.id);
       notifyListeners();
       return true;
     } catch (_) {
@@ -252,7 +133,6 @@ class AuthState extends ChangeNotifier {
     }
   }
 
-  // Normalize phone — fanya ziwe sawa bila prefix
   String _normalizePhone(String phone) {
     String p = phone.replaceAll(' ', '').replaceAll('-', '');
     if (p.startsWith('+255')) p = p.substring(4);
@@ -262,14 +142,16 @@ class AuthState extends ChangeNotifier {
   }
 
   // ===== LOGOUT =====
-  void logout() {
+  void logout() async {
     _currentUser = null;
+    await _authBox.delete('currentUserId');
     notifyListeners();
   }
 
   // ===== SELLERS =====
   void addSeller(AppUser seller) {
     _sellers.add(seller);
+    _saveSellers();
     notifyListeners();
   }
 
@@ -277,12 +159,14 @@ class AuthState extends ChangeNotifier {
     final index = _sellers.indexWhere((s) => s.id == sellerId);
     if (index != -1) {
       _sellers[index] = _sellers[index].copyWith(permissions: permissions);
+      _saveSellers();
       notifyListeners();
     }
   }
 
   void deleteSeller(String sellerId) {
     _sellers.removeWhere((s) => s.id == sellerId);
+    _saveSellers();
     notifyListeners();
   }
 
@@ -293,12 +177,14 @@ class AuthState extends ChangeNotifier {
     if (_currentUser!.isAdmin) {
       _adminUser = _adminUser!.copyWith(pin: newPin);
       _currentUser = _adminUser;
+      _saveAdmin();
     } else {
       final index = _sellers.indexWhere((s) => s.id == _currentUser!.id);
       if (index != -1) {
         _sellers[index] = _sellers[index].copyWith(
-          pin: newPin, mustChangePinOnFirstLogin: false);
+            pin: newPin, mustChangePinOnFirstLogin: false);
         _currentUser = _sellers[index];
+        _saveSellers();
       }
     }
     notifyListeners();
@@ -309,16 +195,19 @@ class AuthState extends ChangeNotifier {
     final index = _sellers.indexWhere((s) => s.id == sellerId);
     if (index != -1) {
       _sellers[index] = _sellers[index].copyWith(
-        pin: newPin, mustChangePinOnFirstLogin: false);
+          pin: newPin, mustChangePinOnFirstLogin: false);
       if (_currentUser?.id == sellerId) _currentUser = _sellers[index];
+      _saveSellers();
       notifyListeners();
     }
   }
 
   bool isUsernameAvailable(String username) {
     if (username.toLowerCase() == 'admin') return false;
-    return !_sellers.any((s) => s.username.toLowerCase() == username.toLowerCase());
+    return !_sellers
+        .any((s) => s.username.toLowerCase() == username.toLowerCase());
   }
 
-  String generateSellerId() => 'seller_${DateTime.now().millisecondsSinceEpoch}';
+  String generateSellerId() =>
+      'seller_${DateTime.now().millisecondsSinceEpoch}';
 }

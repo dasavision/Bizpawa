@@ -556,16 +556,16 @@ class SellersPage extends StatelessWidget {
 
                       if (usernameError != null) return;
 
-                      auth.addSeller(AppUser(
-                        id: auth.generateSellerId(),
-                        name: nameCtrl.text.trim(),
-                        phone: phoneCtrl.text.trim(),
-                        username: usernameCtrl.text.trim().toLowerCase(),
-                        pin: pinCtrl.text,
-                        role: UserRole.seller,
-                        mustChangePinOnFirstLogin: true,
-                        createdAt: DateTime.now(),
-                      ));
+                      auth.addSeller(AppUser.withRole(
+  id: auth.generateSellerId(),
+  name: nameCtrl.text.trim(),
+  phone: phoneCtrl.text.trim(),
+  username: usernameCtrl.text.trim().toLowerCase(),
+  pin: pinCtrl.text,
+  role: UserRole.seller,
+  mustChangePinOnFirstLogin: true,
+  createdAt: DateTime.now(),
+));
 
                       Navigator.pop(ctx);
                       NotificationService.show(
@@ -924,7 +924,7 @@ class _PermissionsPageState extends State<PermissionsPage> {
                   Switch(
                     value: sectionOn,
                     onChanged: (v) => _toggleSection(key, v),
-                    activeColor: _kNavy,
+                    activeThumbColor: _kNavy,
                   ),
                   Icon(
                     isExpanded
