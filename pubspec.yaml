@@ -1,0 +1,50 @@
+name: bizpawa
+description: "BizPawa - Usimamizi wa Biashara Ndogo na za Kati"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  provider: ^6.1.2
+  image_picker: ^1.0.7
+  mobile_scanner: ^5.2.3
+  cupertino_icons: ^1.0.8
+  image_cropper: ^8.0.2
+  pdf: ^3.11.1
+  printing: ^5.13.1
+  qr_flutter: ^4.1.0
+  audioplayers: ^6.1.0
+  print_bluetooth_thermal: ^1.0.9
+  share_plus: ^7.2.1
+  path_provider: ^2.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/logo.png"
+  min_sdk_android: 21
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/logo.png
+    - assets/business1.png
+    - assets/business2.png
+    - assets/business3.png
+    - assets/business4.png
+    - assets/sounds/success.mp3
+    - assets/sounds/error.mp3
+    - assets/sounds/scanner.mp3
