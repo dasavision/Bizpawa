@@ -39,7 +39,7 @@ class _InvoicePageState extends State<InvoicePage> {
 
   @override
   void dispose() {
-    PrintBluetoothThermal.disconnect;
+    PrintBluetoothThermal.disconnect.ignore();
     super.dispose();
   }
 
@@ -104,6 +104,12 @@ class _InvoicePageState extends State<InvoicePage> {
             pw.Text('Tel: ${widget.businessPhone}',
                 style: const pw.TextStyle(fontSize: 7),
                 textAlign: pw.TextAlign.center),
+            if (widget.businessAddress.isNotEmpty) ...[
+              pw.SizedBox(height: 2),
+              pw.Text(widget.businessAddress,
+                  style: const pw.TextStyle(fontSize: 7),
+                  textAlign: pw.TextAlign.center),
+            ],
             pw.SizedBox(height: 4),
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 2),
@@ -333,8 +339,7 @@ class _InvoicePageState extends State<InvoicePage> {
   Future<void> _scanPrinters() async {
     setState(() => _isConnecting = true);
     try {
-      final bool enabled =
-          await PrintBluetoothThermal.bluetoothEnabled;
+      final bool enabled = await PrintBluetoothThermal.bluetoothEnabled;
       if (!enabled) {
         if (mounted) {
           NotificationService.show(
@@ -358,8 +363,7 @@ class _InvoicePageState extends State<InvoicePage> {
         if (mounted) {
           NotificationService.show(
             context: context,
-            message:
-                'Hakuna printer. Unganisha kwenye Bluetooth settings kwanza.',
+            message: 'Hakuna printer. Unganisha kwenye Bluetooth settings kwanza.',
             type: NotificationType.warning,
           );
         }
@@ -393,7 +397,6 @@ class _InvoicePageState extends State<InvoicePage> {
         expand: false,
         builder: (_, scrollController) => Column(
           children: [
-            // Handle + Header
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
               child: Column(
@@ -441,7 +444,6 @@ class _InvoicePageState extends State<InvoicePage> {
               ),
             ),
             const Divider(height: 1),
-            // Scrollable printer list
             Expanded(
               child: ListView.separated(
                 controller: scrollController,
@@ -516,7 +518,7 @@ class _InvoicePageState extends State<InvoicePage> {
       setState(() => _connectedPrinterMac = printer.macAdress);
       await _printEscPos();
 
-      // Disconnect baada ya print - printer iwe huru kwa print nyingine
+      // Disconnect baada ya print
       await Future.delayed(const Duration(milliseconds: 300));
       await PrintBluetoothThermal.disconnect;
       setState(() => _connectedPrinterMac = null);
@@ -544,12 +546,10 @@ class _InvoicePageState extends State<InvoicePage> {
     // Init
     bytes += [0x1B, 0x40];
 
-    // Center
+    // Center + Bold — Business name
     bytes += [0x1B, 0x61, 0x01];
-    // Bold on
     bytes += [0x1B, 0x45, 0x01];
     bytes += _txt('${widget.businessName}\n');
-    // Bold off
     bytes += [0x1B, 0x45, 0x00];
     bytes += _txt('Tel: ${widget.businessPhone}\n');
     if (widget.businessAddress.isNotEmpty) {
@@ -557,7 +557,7 @@ class _InvoicePageState extends State<InvoicePage> {
     }
     bytes += _txt('--------------------------------\n');
 
-    // Left
+    // Left align
     bytes += [0x1B, 0x61, 0x00];
     bytes += _txt('Order: ${order.orderNumber}\n');
     bytes += _txt(
@@ -588,13 +588,11 @@ class _InvoicePageState extends State<InvoicePage> {
 
     if (order.discount > 0) {
       bytes += _txt('Jumla ndogo:'.padRight(18) + '${_fmt(subtotal)} TZS\n');
-      bytes +=
-          _txt('Punguzo:'.padRight(18) + '-${_fmt(order.discount)} TZS\n');
+      bytes += _txt('Punguzo:'.padRight(18) + '-${_fmt(order.discount)} TZS\n');
     }
 
     bytes += [0x1B, 0x45, 0x01];
-    bytes +=
-        _txt('JUMLA KUBWA:'.padRight(18) + '${_fmt(order.amount)} TZS\n');
+    bytes += _txt('JUMLA KUBWA:'.padRight(18) + '${_fmt(order.amount)} TZS\n');
     bytes += [0x1B, 0x45, 0x00];
 
     bytes += _txt('--------------------------------\n');
@@ -610,7 +608,7 @@ class _InvoicePageState extends State<InvoicePage> {
     bytes += _txt('--------------------------------\n');
 
     // QR Code
-    bytes += [0x1B, 0x61, 0x01]; // Center
+    bytes += [0x1B, 0x61, 0x01];
     final qrData = order.orderNumber.codeUnits;
     final qrDataLen = qrData.length + 3;
     bytes += [0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00];
@@ -639,8 +637,7 @@ class _InvoicePageState extends State<InvoicePage> {
     if (mounted) {
       NotificationService.show(
         context: context,
-        message:
-            result ? 'Risiti imechapishwa!' : 'Imeshindwa kuchapisha.',
+        message: result ? 'Risiti imechapishwa!' : 'Imeshindwa kuchapisha.',
         type: result ? NotificationType.success : NotificationType.error,
       );
     }
@@ -666,8 +663,7 @@ class _InvoicePageState extends State<InvoicePage> {
         ),
         title: const Text(
           'Risiti ya Order',
-          style: TextStyle(
-              color: kNavyBlue, fontWeight: FontWeight.bold),
+          style: TextStyle(color: kNavyBlue, fontWeight: FontWeight.bold),
         ),
       ),
       body: Column(
@@ -708,8 +704,7 @@ class _InvoicePageState extends State<InvoicePage> {
                       Text(
                         'Tel: ${widget.businessPhone}',
                         style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade600),
+                            fontSize: 11, color: Colors.grey.shade600),
                         textAlign: TextAlign.center,
                       ),
                       if (business.businessAddress.isNotEmpty) ...[
@@ -717,8 +712,7 @@ class _InvoicePageState extends State<InvoicePage> {
                         Text(
                           business.businessAddress,
                           style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade500),
+                              fontSize: 10, color: Colors.grey.shade500),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -742,8 +736,7 @@ class _InvoicePageState extends State<InvoicePage> {
                         '${order.date.hour.toString().padLeft(2, '0')}:'
                         '${order.date.minute.toString().padLeft(2, '0')}',
                         style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey.shade500),
+                            fontSize: 10, color: Colors.grey.shade500),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
@@ -816,7 +809,8 @@ class _InvoicePageState extends State<InvoicePage> {
                                         item.unit == 'SERVICE'
                                             ? '${item.quantity}'
                                             : '${item.quantity} ${item.unit}',
-                                        style: const TextStyle(fontSize: 10),
+                                        style:
+                                            const TextStyle(fontSize: 10),
                                         textAlign: TextAlign.center,
                                       ),
                                     ),
@@ -846,8 +840,7 @@ class _InvoicePageState extends State<InvoicePage> {
                       const SizedBox(height: 4),
 
                       // Totals
-                      _row('Jumla Ndogo:',
-                          'Tshs ${_fmt(subtotal)} /='),
+                      _row('Jumla Ndogo:', 'Tshs ${_fmt(subtotal)} /='),
                       if (order.discount > 0) ...[
                         const SizedBox(height: 4),
                         _row('Punguzo:',
@@ -915,8 +908,7 @@ class _InvoicePageState extends State<InvoicePage> {
                       Text(
                         order.orderNumber,
                         style: TextStyle(
-                            fontSize: 9,
-                            color: Colors.grey.shade500),
+                            fontSize: 9, color: Colors.grey.shade500),
                       ),
 
                       const SizedBox(height: 16),
@@ -936,8 +928,7 @@ class _InvoicePageState extends State<InvoicePage> {
                       Text(
                         'Tunakaribisha kila wakati',
                         style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey.shade500),
+                            fontSize: 10, color: Colors.grey.shade500),
                         textAlign: TextAlign.center,
                       ),
 
@@ -957,8 +948,7 @@ class _InvoicePageState extends State<InvoicePage> {
                       Text(
                         'Smarter Control, Stronger Growth',
                         style: TextStyle(
-                            fontSize: 9,
-                            color: Colors.grey.shade400),
+                            fontSize: 9, color: Colors.grey.shade400),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -981,10 +971,9 @@ class _InvoicePageState extends State<InvoicePage> {
                   height: 50,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _isPrinting || _isConnecting
-                              ? Colors.grey.shade300
-                              : kNavyBlue,
+                      backgroundColor: _isPrinting || _isConnecting
+                          ? Colors.grey.shade300
+                          : kNavyBlue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1047,8 +1036,7 @@ class _InvoicePageState extends State<InvoicePage> {
                             final bytes = await _buildPdfBytes();
                             await Printing.sharePdf(
                               bytes: bytes,
-                              filename:
-                                  '${widget.order.orderNumber}.pdf',
+                              filename: '${widget.order.orderNumber}.pdf',
                             );
                           },
                         ),
@@ -1064,14 +1052,12 @@ class _InvoicePageState extends State<InvoicePage> {
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.grey.shade700,
-                            side: BorderSide(
-                                color: Colors.grey.shade300),
+                            side: BorderSide(color: Colors.grey.shade300),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          icon: const Icon(Icons.download_outlined,
-                              size: 18),
+                          icon: const Icon(Icons.download_outlined, size: 18),
                           label: const Text('Pakua PDF'),
                           onPressed: () async {
                             final bytes = await _buildPdfBytes();
@@ -1099,8 +1085,7 @@ class _InvoicePageState extends State<InvoicePage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label,
-            style:
-                TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
         Text(
           value,
           style: TextStyle(

@@ -37,7 +37,7 @@
     </queries>
 
     <application
-        android:label="bizpawa"
+        android:label="BizPawa"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
