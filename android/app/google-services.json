@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "734162789375",
+    "project_id": "bizpawa-fbd6f",
+    "storage_bucket": "bizpawa-fbd6f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:734162789375:android:98cac69ab05264e0177dca",
+        "android_client_info": {
+          "package_name": "com.dasavision.bizpawa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7kFD8x57EQJeUmHHacnjs0FTIKnHGcYw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

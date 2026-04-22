@@ -8,7 +8,6 @@ import 'package:bizpawa/models/order_item.dart';
 
 const _kNavy = Color(0xFF1B2E6B);
 const _kOrange = Color(0xFFF5A623);
-const _kGreen = Color(0xFF22C55E);
 
 enum _PayType { cash, mobile, bank, credit }
 

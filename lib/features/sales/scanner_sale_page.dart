@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:bizpawa/core/state/business_state.dart';
-import 'package:bizpawa/core/state/auth_state.dart';
+
 import 'package:bizpawa/core/services/notification_service.dart';
 import 'package:bizpawa/models/product.dart';
 import 'package:bizpawa/models/order_item.dart';
