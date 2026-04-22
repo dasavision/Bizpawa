@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'create_pin_page.dart';
 
 const _kNavy = Color(0xFF1B2E6B);
-const _kOrange = Color(0xFFF5A623);
 
 // ===== AINA ZA BIASHARA =====
 class _BizType {

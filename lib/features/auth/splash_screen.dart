@@ -5,7 +5,6 @@ import 'package:bizpawa/core/state/auth_state.dart';
 import 'package:bizpawa/features/auth/welcome_page.dart';
 import 'package:bizpawa/features/auth/login_page.dart';
 import 'package:bizpawa/core/app_shell.dart';
-import 'package:bizpawa/widgets/bizpawa_logo.dart';
 
 const _kNavy = Color(0xFF1B2E6B);
 const _kOrange = Color(0xFFF5A623);

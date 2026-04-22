@@ -1,13 +1,30 @@
 import 'dart:math';
+import 'package:hive/hive.dart';
 
+part 'stock_batch.g.dart';
+
+@HiveType(typeId: 1)
 class StockBatch {
+  @HiveField(0)
   final int batchNumber;
+
+  @HiveField(1)
   final int quantity;
+
+  @HiveField(2)
   final int buyingPrice;
+
+  @HiveField(3)
   final int sellingPrice;
+
+  @HiveField(4)
   final DateTime date;
+
+  @HiveField(5)
   int remainingStock;
-  final String batchBarcodeId; // ← MPYA: barcode ya batch hii
+
+  @HiveField(6)
+  final String batchBarcodeId;
 
   StockBatch({
     required this.batchNumber,
@@ -16,31 +33,20 @@ class StockBatch {
     required this.sellingPrice,
     required this.date,
     required this.remainingStock,
-    String? batchBarcodeId, // hiari — ikiwa haitolewa, inagenerate auto
+    String? batchBarcodeId,
   }) : batchBarcodeId = batchBarcodeId ?? _generateBatchBarcodeId(batchNumber);
 
-  /// Auto-generate barcode ya batch kwa format: BIZB + batchNumber + digits 8
-  /// Mfano: BIZB01-12345678
-  /// "B" inamaanisha "Batch" — tofauti na barcode ya bidhaa (BIZ...)
   static String _generateBatchBarcodeId(int batchNumber) {
     final random = Random();
-    final digits =
-        List.generate(8, (_) => random.nextInt(10)).join();
+    final digits = List.generate(8, (_) => random.nextInt(10)).join();
     final batchStr = batchNumber.toString().padLeft(2, '0');
     return 'BIZB$batchStr$digits';
   }
 
-  /// Jumla ya manunuzi
   int get totalCost => quantity * buyingPrice;
-
-  /// Faida inayotarajiwa (ukiuza yote)
   int get expectedProfit => (sellingPrice - buyingPrice) * quantity;
+  int get earnedProfit => (sellingPrice - buyingPrice) * (quantity - remainingStock);
 
-  /// Faida iliyopatikana (kutoka stock iliyouzwa)
-  int get earnedProfit =>
-      (sellingPrice - buyingPrice) * (quantity - remainingStock);
-
-  /// Jina la awamu kwa Kiswahili
   String get batchName {
     const names = [
       'Kwanza', 'Pili', 'Tatu', 'Nne', 'Tano',

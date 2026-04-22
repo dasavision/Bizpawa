@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
-
+import 'package:bizpawa/core/business_hints.dart';
 import 'package:bizpawa/core/state/business_state.dart';
 import 'package:bizpawa/core/services/notification_service.dart';
 import 'package:bizpawa/models/product.dart';
@@ -31,7 +31,6 @@ class _AddProductPageState extends State<AddProductPage> {
 
   String? _imagePath;
   bool _showDescription = false;
-  bool _showBarcode = false;
   String _selectedKundi = 'General';
   String? _selectedUnit;
   DateTime? _expiryDate;
@@ -254,7 +253,6 @@ class _AddProductPageState extends State<AddProductPage> {
                             NotificationService.playScanner();
                             setState(() {
                               _barcodeController.text = raw;
-                              _showBarcode = true;
                             });
                             NotificationService.show(
                               context: context,
@@ -682,7 +680,7 @@ class _AddProductPageState extends State<AddProductPage> {
               TextFormField(
                 controller: _nameController,
                 textCapitalization: TextCapitalization.words,
-                decoration: _inputDecoration('Mf. Sukari, Mchele...'),
+                decoration: _inputDecoration(getProductHint(business.bizType)),
                 validator: (v) =>
                     v == null || v.trim().isEmpty ? 'Jina linahitajika' : null,
               ),

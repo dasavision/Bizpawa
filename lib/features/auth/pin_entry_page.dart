@@ -4,7 +4,6 @@ import 'package:bizpawa/core/state/auth_state.dart';
 import 'package:bizpawa/core/app_shell.dart';
 
 const _kNavy = Color(0xFF1B2E6B);
-const _kOrange = Color(0xFFF5A623);
 
 class PinEntryPage extends StatefulWidget {
   final String? phone;       // Admin anapoingia kwa simu
@@ -80,7 +79,8 @@ class _PinEntryPageState extends State<PinEntryPage>
     if (success) {
       // Check mustChangePinOnFirstLogin kwa seller
       if (!widget.isAdmin && auth.currentUser!.mustChangePinOnFirstLogin) {
-        // TODO: Navigate to change PIN page
+        // 
+        //// Change PIN - itatekelezwa baadaye
       }
       Navigator.pushAndRemoveUntil(
         context,

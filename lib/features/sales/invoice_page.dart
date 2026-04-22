@@ -6,7 +6,7 @@ import 'package:printing/printing.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
-
+import 'package:permission_handler/permission_handler.dart';
 import 'package:bizpawa/core/state/business_state.dart';
 import 'package:bizpawa/core/services/notification_service.dart';
 
@@ -323,52 +323,79 @@ class _InvoicePageState extends State<InvoicePage> {
 
   // ===== BLUETOOTH =====
   Future<void> _scanPrinters() async {
-    setState(() => _isConnecting = true);
-    try {
-      final bool enabled =
-          await PrintBluetoothThermal.bluetoothEnabled;
-      if (!enabled) {
-        if (mounted) {
-          NotificationService.show(
-            context: context,
-            message: 'Washa Bluetooth kwanza',
-            type: NotificationType.error,
-          );
-        }
-        setState(() => _isConnecting = false);
-        return;
-      }
+  setState(() => _isConnecting = true);
+  try {
+    // Omba permissions kwanza
+    if (await Permission.bluetoothConnect.isDenied) {
+      await Permission.bluetoothConnect.request();
+    }
+    if (await Permission.bluetoothScan.isDenied) {
+      await Permission.bluetoothScan.request();
+    }
+    if (await Permission.location.isDenied) {
+      await Permission.location.request();
+    }
 
-      final List<BluetoothInfo> devices =
-          await PrintBluetoothThermal.pairedBluetooths;
-      setState(() {
-        _printers = devices;
-        _isConnecting = false;
-      });
+    // Angalia kama permissions zimepewa
+    final connectStatus = await Permission.bluetoothConnect.status;
+    final scanStatus = await Permission.bluetoothScan.status;
 
-      if (devices.isEmpty) {
-        if (mounted) {
-          NotificationService.show(
-            context: context,
-            message:
-                'Hakuna printer. Unganisha kwenye Bluetooth settings kwanza.',
-            type: NotificationType.warning,
-          );
-        }
-      } else {
-        if (mounted) _showPrinterSheet();
-      }
-    } catch (e) {
-      setState(() => _isConnecting = false);
+    if (connectStatus.isDenied || scanStatus.isDenied) {
       if (mounted) {
         NotificationService.show(
           context: context,
-          message: 'Hitilafu ya Bluetooth: $e',
+          message: 'Ruhusa ya Bluetooth inahitajika',
           type: NotificationType.error,
         );
       }
+      setState(() => _isConnecting = false);
+      return;
+    }
+
+    // Angalia Bluetooth imewashwa
+    final bool enabled = await PrintBluetoothThermal.bluetoothEnabled;
+    if (!enabled) {
+      if (mounted) {
+        NotificationService.show(
+          context: context,
+          message: 'Washa Bluetooth kwanza',
+          type: NotificationType.error,
+        );
+      }
+      setState(() => _isConnecting = false);
+      return;
+    }
+
+    // Pata printers zilizounganishwa
+    final List<BluetoothInfo> devices =
+        await PrintBluetoothThermal.pairedBluetooths;
+    setState(() {
+      _printers = devices;
+      _isConnecting = false;
+    });
+
+    if (devices.isEmpty) {
+      if (mounted) {
+        NotificationService.show(
+          context: context,
+          message: 'Hakuna printer. Unganisha kwenye Bluetooth settings kwanza.',
+          type: NotificationType.warning,
+        );
+      }
+    } else {
+      if (mounted) _showPrinterSheet();
+    }
+  } catch (e) {
+    setState(() => _isConnecting = false);
+    if (mounted) {
+      NotificationService.show(
+        context: context,
+        message: 'Hitilafu ya Bluetooth: $e',
+        type: NotificationType.error,
+      );
     }
   }
+}
 
   void _showPrinterSheet() {
     showModalBottomSheet(
