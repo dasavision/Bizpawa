@@ -9,11 +9,6 @@ import 'features/inventory/add_product_page.dart';
 
 import 'models/product.dart';
 import 'models/stock_batch.dart';
-import 'models/customer.dart';
-import 'models/expense.dart';
-import 'models/supplier.dart';
-import 'models/sale_entry.dart';
-import 'models/app_note.dart';
 import 'models/app_user.dart';
 
 void main() async {
@@ -48,15 +43,19 @@ void main() async {
   await Hive.openBox<AppNote>('notes');
   await Hive.openBox('auth');       // Box ya admin credentials
   await Hive.openBox<AppUser>('sellers'); // Box ya wauzaji
+  await Hive.openBox('profile');
 
   // MPYA
 final authState = AuthState();
 await authState.init();
 
+final businessState = BusinessState();
+await businessState.init();
+
 runApp(
   MultiProvider(
     providers: [
-      ChangeNotifierProvider(create: (_) => BusinessState()),
+      ChangeNotifierProvider.value(value: businessState),
       ChangeNotifierProvider.value(value: authState),
     ],
     child: const MyApp(),

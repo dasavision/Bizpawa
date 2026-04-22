@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:bizpawa/models/product.dart';
 import 'package:bizpawa/models/stock_batch.dart';
 import 'package:bizpawa/models/sale_entry.dart';
@@ -21,25 +22,93 @@ enum SalesFilter { today, week, custom }
 
 class BusinessState extends ChangeNotifier {
 
+  // ===== HIVE BOXES =====
+  late final Box _profileBox;
+  late final Box<Product> _productsBox;
+  late final Box<SaleEntry> _salesBox;
+  late final Box<Expense> _expensesBox;
+  late final Box<Customer> _customersBox;
+  late final Box<Supplier> _suppliersBox;
+  late final Box<AppNote> _notesBox;
+
+  /// ================== INITIALIZE — Load data kutoka Hive ==================
+  Future<void> init() async {
+    _profileBox   = Hive.box('profile');
+    _productsBox  = Hive.box<Product>('products');
+    _salesBox     = Hive.box<SaleEntry>('sales');
+    _expensesBox  = Hive.box<Expense>('expenses');
+    _customersBox = Hive.box<Customer>('customers');
+    _suppliersBox = Hive.box<Supplier>('suppliers');
+    _notesBox     = Hive.box<AppNote>('notes');
+
+    // Load business profile
+    businessName    = _profileBox.get('businessName',    defaultValue: 'Jina la Biashara');
+    businessPhone   = _profileBox.get('businessPhone',   defaultValue: '---');
+    businessAddress = _profileBox.get('businessAddress', defaultValue: '');
+    bizType         = _profileBox.get('bizType',         defaultValue: '');
+
+    // Load custom categories
+    final savedCategories = _profileBox.get('customCategories');
+    if (savedCategories != null) {
+      _customCategories.addAll(List<String>.from(savedCategories));
+    }
+
+    // Load expense categories
+    final savedExpCats = _profileBox.get('expenseCategories');
+    if (savedExpCats != null) {
+      _expenseCategories
+        ..clear()
+        ..addAll(List<String>.from(savedExpCats));
+    }
+
+    // Load inventory
+    inventory.addAll(_productsBox.values);
+
+    // Load sales history — mpangilio wa tarehe (mpya kwanza)
+    _salesHistory.addAll(
+      _salesBox.values.toList()
+        ..sort((a, b) => b.date.compareTo(a.date)),
+    );
+
+    // Load expenses
+    _expenses.addAll(
+      _expensesBox.values.toList()
+        ..sort((a, b) => b.date.compareTo(a.date)),
+    );
+
+    // Load customers
+    _customers.addAll(_customersBox.values);
+
+    // Load suppliers
+    _suppliers.addAll(_suppliersBox.values);
+
+    // Load notes
+    _notes.addAll(_notesBox.values);
+  }
+
   /// ================== BUSINESS PROFILE ==================
-  String businessName = 'Jina la Biashara';
-  String businessPhone = '---';
+  String businessName    = 'Jina la Biashara';
+  String businessPhone   = '---';
   String businessAddress = '';
-  String bizType = '';
+  String bizType         = '';
 
   void updateBusinessProfile({
     required String name,
     required String phone,
     required String address,
   }) {
-    businessName = name;
-    businessPhone = phone;
+    businessName    = name;
+    businessPhone   = phone;
     businessAddress = address;
+    _profileBox.put('businessName',    businessName);
+    _profileBox.put('businessPhone',   businessPhone);
+    _profileBox.put('businessAddress', businessAddress);
     notifyListeners();
   }
 
   void updateBizType(String type) {
     bizType = type;
+    _profileBox.put('bizType', bizType);
     notifyListeners();
   }
 
@@ -49,6 +118,7 @@ class BusinessState extends ChangeNotifier {
 
   void addCustomer(Customer customer) {
     _customers.add(customer);
+    _customersBox.put(customer.id, customer);
     notifyListeners();
   }
 
@@ -56,12 +126,14 @@ class BusinessState extends ChangeNotifier {
     final index = _customers.indexWhere((c) => c.id == updated.id);
     if (index != -1) {
       _customers[index] = updated;
+      _customersBox.put(updated.id, updated);
       notifyListeners();
     }
   }
 
   void deleteCustomer(String id) {
     _customers.removeWhere((c) => c.id == id);
+    _customersBox.delete(id);
     notifyListeners();
   }
 
@@ -172,11 +244,13 @@ class BusinessState extends ChangeNotifier {
       product.batches.add(firstBatch);
     }
     inventory.add(product);
+    _productsBox.put(product.id, product);
     notifyListeners();
   }
 
   void addService(Product service) {
     inventory.add(service);
+    _productsBox.put(service.id, service);
     notifyListeners();
   }
 
@@ -184,12 +258,14 @@ class BusinessState extends ChangeNotifier {
     final index = inventory.indexWhere((p) => p.id == updated.id);
     if (index != -1) {
       inventory[index] = updated;
+      _productsBox.put(updated.id, updated);
       notifyListeners();
     }
   }
 
   void deleteProductById(String productId) {
     inventory.removeWhere((p) => p.id == productId);
+    _productsBox.delete(productId);
     notifyListeners();
   }
 
@@ -198,6 +274,7 @@ class BusinessState extends ChangeNotifier {
     final index = inventory.indexWhere((p) => p.id == product.id);
     if (index != -1) {
       inventory[index].stock += quantity;
+      _productsBox.put(inventory[index].id, inventory[index]);
       notifyListeners();
     }
   }
@@ -207,6 +284,7 @@ class BusinessState extends ChangeNotifier {
     if (index == -1) return;
     inventory[index].batches.add(batch);
     inventory[index].stock += batch.quantity;
+    _productsBox.put(inventory[index].id, inventory[index]);
     notifyListeners();
   }
 
@@ -229,6 +307,7 @@ class BusinessState extends ChangeNotifier {
     if (trimmed.isEmpty) return;
     if (!_customCategories.contains(trimmed)) {
       _customCategories.add(trimmed);
+      _profileBox.put('customCategories', _customCategories);
       notifyListeners();
     }
   }
@@ -268,6 +347,7 @@ class BusinessState extends ChangeNotifier {
       }
       if (item.product.unit != 'SERVICE') {
         item.product.stock -= item.quantity;
+        _productsBox.put(item.product.id, item.product);
       }
 
       final itemTotal = item.product.sellingPrice * item.quantity;
@@ -291,27 +371,27 @@ class BusinessState extends ChangeNotifier {
 
     final finalAmount = totalAmount - discount;
 
-    _salesHistory.insert(
-      0,
-      SaleEntry(
-        orderNumber: orderNumber,
-        productName: productNames.length == 1
-            ? productNames.first
-            : '${productNames.first} +${productNames.length - 1} zaidi',
-        amount: finalAmount,
-        date: date,
-        paid: paid,
-        paidAmount: paid ? finalAmount : 0,
-        customerName: customerName,
-        customerPhone: customerPhone,
-        sellerName: sellerName,
-        discount: discount,
-        note: note,
-        paymentMethod: paymentMethod,
-        items: saleItems,
-        totalCogs: totalCogs,
-      ),
+    final entry = SaleEntry(
+      orderNumber: orderNumber,
+      productName: productNames.length == 1
+          ? productNames.first
+          : '${productNames.first} +${productNames.length - 1} zaidi',
+      amount: finalAmount,
+      date: date,
+      paid: paid,
+      paidAmount: paid ? finalAmount : 0,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      sellerName: sellerName,
+      discount: discount,
+      note: note,
+      paymentMethod: paymentMethod,
+      items: saleItems,
+      totalCogs: totalCogs,
     );
+
+    _salesHistory.insert(0, entry);
+    _salesBox.put(orderNumber, entry);
     notifyListeners();
   }
 
@@ -324,34 +404,38 @@ class BusinessState extends ChangeNotifier {
     String sellerName = 'Admin',
   }) {
     if (product.unit != 'SERVICE' && quantity > product.stock) return;
-    if (product.unit != 'SERVICE') product.stock -= quantity;
+    if (product.unit != 'SERVICE') {
+      product.stock -= quantity;
+      _productsBox.put(product.id, product);
+    }
 
     final amount = (product.sellingPrice * quantity) - discount;
     final cogs = product.unit == 'SERVICE' ? 0 : product.buyingPrice * quantity;
+    final orderNumber = generateOrderNumber();
 
-    _salesHistory.insert(
-      0,
-      SaleEntry(
-        orderNumber: generateOrderNumber(),
-        productName: product.name,
-        amount: amount,
-        date: date,
-        paid: paid,
-        paidAmount: paid ? amount : 0,
-        totalCogs: cogs,
-        sellerName: sellerName,
-        items: [
-          SaleItemEntry(
-            productId: product.id,
-            productName: product.name,
-            unit: product.unit,
-            quantity: quantity,
-            sellingPrice: product.sellingPrice,
-            buyingPrice: product.buyingPrice,
-          ),
-        ],
-      ),
+    final entry = SaleEntry(
+      orderNumber: orderNumber,
+      productName: product.name,
+      amount: amount,
+      date: date,
+      paid: paid,
+      paidAmount: paid ? amount : 0,
+      totalCogs: cogs,
+      sellerName: sellerName,
+      items: [
+        SaleItemEntry(
+          productId: product.id,
+          productName: product.name,
+          unit: product.unit,
+          quantity: quantity,
+          sellingPrice: product.sellingPrice,
+          buyingPrice: product.buyingPrice,
+        ),
+      ],
     );
+
+    _salesHistory.insert(0, entry);
+    _salesBox.put(orderNumber, entry);
     notifyListeners();
   }
 
@@ -376,7 +460,7 @@ class BusinessState extends ChangeNotifier {
       date: date,
     );
 
-    _salesHistory[index] = SaleEntry(
+    final updated = SaleEntry(
       orderNumber: sale.orderNumber,
       productName: sale.productName,
       amount: sale.amount,
@@ -395,6 +479,9 @@ class BusinessState extends ChangeNotifier {
       refundAmount: sale.refundAmount,
       totalCogs: sale.totalCogs,
     );
+
+    _salesHistory[index] = updated;
+    _salesBox.put(orderNumber, updated);
     notifyListeners();
   }
 
@@ -408,10 +495,12 @@ class BusinessState extends ChangeNotifier {
         final productIndex = inventory.indexWhere((p) => p.id == item.productId);
         if (productIndex != -1) {
           inventory[productIndex].stock += item.quantity;
+          _productsBox.put(inventory[productIndex].id, inventory[productIndex]);
         }
       }
     }
     _salesHistory.removeAt(saleIndex);
+    _salesBox.delete(orderNumber);
     notifyListeners();
   }
 
@@ -436,6 +525,7 @@ class BusinessState extends ChangeNotifier {
         final productIndex = inventory.indexWhere((p) => p.id == refundItem.productId);
         if (productIndex != -1) {
           inventory[productIndex].stock += refundItem.quantity;
+          _productsBox.put(inventory[productIndex].id, inventory[productIndex]);
         }
         refundCogs += refundItem.buyingPrice * refundItem.quantity;
       }
@@ -447,7 +537,7 @@ class BusinessState extends ChangeNotifier {
     final newPaidAmount = (sale.paidAmount - refundAmount).clamp(0, sale.amount);
     final newCogs = (sale.totalCogs - refundCogs).clamp(0, sale.totalCogs);
 
-    _salesHistory[saleIndex] = SaleEntry(
+    final updated = SaleEntry(
       orderNumber: sale.orderNumber,
       productName: sale.productName,
       amount: sale.amount,
@@ -466,6 +556,9 @@ class BusinessState extends ChangeNotifier {
       refundAmount: totalRefunded,
       totalCogs: newCogs,
     );
+
+    _salesHistory[saleIndex] = updated;
+    _salesBox.put(orderNumber, updated);
 
     _refunds.insert(
       0,
@@ -499,12 +592,14 @@ class BusinessState extends ChangeNotifier {
     if (trimmed.isEmpty) return;
     if (!_expenseCategories.contains(trimmed)) {
       _expenseCategories.add(trimmed);
+      _profileBox.put('expenseCategories', _expenseCategories);
       notifyListeners();
     }
   }
 
   void addExpense(Expense expense) {
     _expenses.insert(0, expense);
+    _expensesBox.put(expense.id, expense);
     notifyListeners();
   }
 
@@ -512,6 +607,7 @@ class BusinessState extends ChangeNotifier {
     final index = _expenses.indexWhere((e) => e.id == id);
     if (index == -1) return;
     _expenses.removeAt(index);
+    _expensesBox.delete(id);
     notifyListeners();
   }
 
@@ -638,11 +734,13 @@ class BusinessState extends ChangeNotifier {
 
   void addSupplier(Supplier supplier) {
     _suppliers.add(supplier);
+    _suppliersBox.put(supplier.id, supplier);
     notifyListeners();
   }
 
   void deleteSupplier(String id) {
     _suppliers.removeWhere((s) => s.id == id);
+    _suppliersBox.delete(id);
     notifyListeners();
   }
 
@@ -663,7 +761,7 @@ class BusinessState extends ChangeNotifier {
       date: date,
     );
 
-    _suppliers[index] = Supplier(
+    final updated = Supplier(
       id: supplier.id,
       name: supplier.name,
       phone: supplier.phone,
@@ -672,6 +770,9 @@ class BusinessState extends ChangeNotifier {
       paidAmount: supplier.paidAmount + amount,
       payments: [...supplier.payments, payment],
     );
+
+    _suppliers[index] = updated;
+    _suppliersBox.put(supplierId, updated);
     notifyListeners();
   }
 
@@ -681,6 +782,7 @@ class BusinessState extends ChangeNotifier {
 
   void addNote(AppNote note) {
     _notes.add(note);
+    _notesBox.put(note.id, note);
     notifyListeners();
   }
 
@@ -688,12 +790,14 @@ class BusinessState extends ChangeNotifier {
     final index = _notes.indexWhere((n) => n.id == updated.id);
     if (index != -1) {
       _notes[index] = updated;
+      _notesBox.put(updated.id, updated);
       notifyListeners();
     }
   }
 
   void deleteNote(String id) {
     _notes.removeWhere((n) => n.id == id);
+    _notesBox.delete(id);
     notifyListeners();
   }
 }
