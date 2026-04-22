@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:bizpawa/core/state/business_state.dart';
 import 'package:bizpawa/core/state/auth_state.dart';
+import 'package:bizpawa/core/services/notification_service.dart';
 import 'order_page.dart';
 import 'order_detail_page.dart';
 
@@ -77,6 +79,87 @@ class _SalesPageState extends State<SalesPage> {
           }),
           const SizedBox(height: 8),
         ]),
+      ),
+    );
+  }
+
+  void _scanOrder(BuildContext context, BusinessState business) {
+    final controller = MobileScannerController(
+      detectionSpeed: DetectionSpeed.normal,
+      facing: CameraFacing.back,
+    );
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.6,
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white30,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text('Scan QR ya Risiti',
+                style: TextStyle(color: Colors.white,
+                    fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            const Text('Elekeza kamera kwenye QR code ya risiti',
+                style: TextStyle(color: Colors.white54, fontSize: 12)),
+            const SizedBox(height: 16),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: MobileScanner(
+                    controller: controller,
+                    onDetect: (capture) {
+                      final raw = capture.barcodes.firstOrNull?.rawValue;
+                      if (raw == null) return;
+                      controller.dispose();
+                      Navigator.pop(context);
+
+                      // Tafuta order kwa order number
+                      final order = business.salesHistory
+                          .where((s) => s.orderNumber == raw)
+                          .firstOrNull;
+
+                      if (order != null) {
+                        Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => OrderDetailPage(order: order)));
+                      } else {
+                        NotificationService.show(
+                          context: context,
+                          message: 'Order haikupatikana: $raw',
+                          type: NotificationType.warning,
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                controller.dispose();
+                Navigator.pop(context);
+              },
+              child: const Text('Ghairi',
+                  style: TextStyle(color: Colors.white70)),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -175,6 +258,18 @@ class _SalesPageState extends State<SalesPage> {
                     decoration: InputDecoration(
                       hintText: 'Tafuta mauzo ya ${_formatDate(_selectedDate)}...',
                       prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      suffixIcon: GestureDetector(
+                        onTap: () => _scanOrder(context, business),
+                        child: Container(
+                          margin: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: kNavyBlue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.qr_code_scanner,
+                              color: kNavyBlue, size: 18),
+                        ),
+                      ),
                       filled: true,
                       fillColor: Colors.grey.shade100,
                       contentPadding: const EdgeInsets.symmetric(vertical: 0),

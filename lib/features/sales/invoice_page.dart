@@ -6,7 +6,7 @@ import 'package:printing/printing.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
-import 'package:permission_handler/permission_handler.dart';
+
 import 'package:bizpawa/core/state/business_state.dart';
 import 'package:bizpawa/core/services/notification_service.dart';
 
@@ -17,12 +17,14 @@ class InvoicePage extends StatefulWidget {
   final SaleEntry order;
   final String businessName;
   final String businessPhone;
+  final String businessAddress;
 
   const InvoicePage({
     super.key,
     required this.order,
     required this.businessName,
     required this.businessPhone,
+    required this.businessAddress,
   });
 
   @override
@@ -34,6 +36,12 @@ class _InvoicePageState extends State<InvoicePage> {
   bool _isConnecting = false;
   String? _connectedPrinterMac;
   List<BluetoothInfo> _printers = [];
+
+  @override
+  void dispose() {
+    PrintBluetoothThermal.disconnect;
+    super.dispose();
+  }
 
   String _fmt(int amount) {
     return amount.toString().replaceAllMapped(
@@ -323,141 +331,159 @@ class _InvoicePageState extends State<InvoicePage> {
 
   // ===== BLUETOOTH =====
   Future<void> _scanPrinters() async {
-  setState(() => _isConnecting = true);
-  try {
-    // Omba permissions kwanza
-    if (await Permission.bluetoothConnect.isDenied) {
-      await Permission.bluetoothConnect.request();
-    }
-    if (await Permission.bluetoothScan.isDenied) {
-      await Permission.bluetoothScan.request();
-    }
-    if (await Permission.location.isDenied) {
-      await Permission.location.request();
-    }
+    setState(() => _isConnecting = true);
+    try {
+      final bool enabled =
+          await PrintBluetoothThermal.bluetoothEnabled;
+      if (!enabled) {
+        if (mounted) {
+          NotificationService.show(
+            context: context,
+            message: 'Washa Bluetooth kwanza',
+            type: NotificationType.error,
+          );
+        }
+        setState(() => _isConnecting = false);
+        return;
+      }
 
-    // Angalia kama permissions zimepewa
-    final connectStatus = await Permission.bluetoothConnect.status;
-    final scanStatus = await Permission.bluetoothScan.status;
+      final List<BluetoothInfo> devices =
+          await PrintBluetoothThermal.pairedBluetooths;
+      setState(() {
+        _printers = devices;
+        _isConnecting = false;
+      });
 
-    if (connectStatus.isDenied || scanStatus.isDenied) {
+      if (devices.isEmpty) {
+        if (mounted) {
+          NotificationService.show(
+            context: context,
+            message:
+                'Hakuna printer. Unganisha kwenye Bluetooth settings kwanza.',
+            type: NotificationType.warning,
+          );
+        }
+      } else {
+        if (mounted) _showPrinterSheet();
+      }
+    } catch (e) {
+      setState(() => _isConnecting = false);
       if (mounted) {
         NotificationService.show(
           context: context,
-          message: 'Ruhusa ya Bluetooth inahitajika',
+          message: 'Hitilafu ya Bluetooth: $e',
           type: NotificationType.error,
         );
       }
-      setState(() => _isConnecting = false);
-      return;
-    }
-
-    // Angalia Bluetooth imewashwa
-    final bool enabled = await PrintBluetoothThermal.bluetoothEnabled;
-    if (!enabled) {
-      if (mounted) {
-        NotificationService.show(
-          context: context,
-          message: 'Washa Bluetooth kwanza',
-          type: NotificationType.error,
-        );
-      }
-      setState(() => _isConnecting = false);
-      return;
-    }
-
-    // Pata printers zilizounganishwa
-    final List<BluetoothInfo> devices =
-        await PrintBluetoothThermal.pairedBluetooths;
-    setState(() {
-      _printers = devices;
-      _isConnecting = false;
-    });
-
-    if (devices.isEmpty) {
-      if (mounted) {
-        NotificationService.show(
-          context: context,
-          message: 'Hakuna printer. Unganisha kwenye Bluetooth settings kwanza.',
-          type: NotificationType.warning,
-        );
-      }
-    } else {
-      if (mounted) _showPrinterSheet();
-    }
-  } catch (e) {
-    setState(() => _isConnecting = false);
-    if (mounted) {
-      NotificationService.show(
-        context: context,
-        message: 'Hitilafu ya Bluetooth: $e',
-        type: NotificationType.error,
-      );
     }
   }
-}
 
   void _showPrinterSheet() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (_, scrollController) => Column(
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+            // Handle + Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Text(
+                        'Chagua Printer',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: kNavyBlue),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: kNavyBlue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${_printers.length} zinapatikana',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              color: kNavyBlue,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // Scrollable printer list
+            Expanded(
+              child: ListView.separated(
+                controller: scrollController,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: _printers.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(height: 1, indent: 72),
+                itemBuilder: (_, i) {
+                  final printer = _printers[i];
+                  return ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 24),
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: kNavyBlue.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.print_outlined,
+                          color: kNavyBlue, size: 20),
+                    ),
+                    title: Text(printer.name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, color: kNavyBlue)),
+                    subtitle: Text(printer.macAdress,
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade500)),
+                    trailing: _connectedPrinterMac == printer.macAdress
+                        ? const Icon(Icons.check_circle,
+                            color: Color(0xFF22C55E))
+                        : const Icon(Icons.arrow_forward_ios,
+                            size: 14, color: Colors.grey),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _connectAndPrint(printer);
+                    },
+                  );
+                },
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Chagua Printer',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: kNavyBlue),
-            ),
-            const SizedBox(height: 12),
-            ..._printers.map((printer) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: kNavyBlue.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.print_outlined,
-                        color: kNavyBlue, size: 20),
-                  ),
-                  title: Text(printer.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, color: kNavyBlue)),
-                  subtitle: Text(printer.macAdress,
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade500)),
-                  trailing: _connectedPrinterMac == printer.macAdress
-                      ? const Icon(Icons.check_circle,
-                          color: Color(0xFF22C55E))
-                      : const Icon(Icons.arrow_forward_ios,
-                          size: 14, color: Colors.grey),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _connectAndPrint(printer);
-                  },
-                )),
-            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -467,6 +493,10 @@ class _InvoicePageState extends State<InvoicePage> {
   Future<void> _connectAndPrint(BluetoothInfo printer) async {
     setState(() => _isPrinting = true);
     try {
+      // Disconnect kwanza - zima connection yoyote ya zamani
+      await PrintBluetoothThermal.disconnect;
+      await Future.delayed(const Duration(milliseconds: 500));
+
       final bool connected = await PrintBluetoothThermal.connect(
         macPrinterAddress: printer.macAdress,
       );
@@ -485,6 +515,12 @@ class _InvoicePageState extends State<InvoicePage> {
 
       setState(() => _connectedPrinterMac = printer.macAdress);
       await _printEscPos();
+
+      // Disconnect baada ya print - printer iwe huru kwa print nyingine
+      await Future.delayed(const Duration(milliseconds: 300));
+      await PrintBluetoothThermal.disconnect;
+      setState(() => _connectedPrinterMac = null);
+
     } catch (e) {
       if (mounted) {
         NotificationService.show(
@@ -516,6 +552,9 @@ class _InvoicePageState extends State<InvoicePage> {
     // Bold off
     bytes += [0x1B, 0x45, 0x00];
     bytes += _txt('Tel: ${widget.businessPhone}\n');
+    if (widget.businessAddress.isNotEmpty) {
+      bytes += _txt('${widget.businessAddress}\n');
+    }
     bytes += _txt('--------------------------------\n');
 
     // Left
@@ -570,13 +609,26 @@ class _InvoicePageState extends State<InvoicePage> {
 
     bytes += _txt('--------------------------------\n');
 
-    // Center
-    bytes += [0x1B, 0x61, 0x01];
+    // QR Code
+    bytes += [0x1B, 0x61, 0x01]; // Center
+    final qrData = order.orderNumber.codeUnits;
+    final qrDataLen = qrData.length + 3;
+    bytes += [0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00];
+    bytes += [0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06];
+    bytes += [0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30];
+    bytes += [0x1D, 0x28, 0x6B, qrDataLen & 0xFF, (qrDataLen >> 8) & 0xFF, 0x31, 0x50, 0x30];
+    bytes += qrData;
+    bytes += [0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30];
+    bytes += _txt('${order.orderNumber}\n');
+    bytes += _txt('--------------------------------\n');
+
+    // Footer
     bytes += [0x1B, 0x45, 0x01];
     bytes += _txt('* Asante na Karibu Tena! *\n');
     bytes += [0x1B, 0x45, 0x00];
     bytes += _txt('Powered by BizPawa\n');
     bytes += _txt('Smarter Control, Stronger Growth\n');
+    bytes += _txt('\n');
 
     // Feed + cut
     bytes += [0x1B, 0x64, 0x05];

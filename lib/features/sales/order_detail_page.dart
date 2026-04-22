@@ -397,6 +397,8 @@ class OrderDetailPage extends StatelessWidget {
                           context.read<BusinessState>().businessName,
                       businessPhone:
                           context.read<BusinessState>().businessPhone,
+                      businessAddress:
+                          context.read<BusinessState>().businessAddress,
                     ),
                   ),
                 ),
