@@ -6,6 +6,7 @@ import 'package:bizpawa/core/state/auth_state.dart';
 import 'package:bizpawa/core/services/notification_service.dart';
 import 'order_page.dart';
 import 'order_detail_page.dart';
+import 'scanner_sale_page.dart';
 
 const kNavyBlue = Color(0xFF1B2E6B);
 const kOrange = Color(0xFFF5A623);
@@ -128,12 +129,9 @@ class _SalesPageState extends State<SalesPage> {
                       if (raw == null) return;
                       controller.dispose();
                       Navigator.pop(context);
-
-                      // Tafuta order kwa order number
                       final order = business.salesHistory
                           .where((s) => s.orderNumber == raw)
                           .firstOrNull;
-
                       if (order != null) {
                         Navigator.push(context, MaterialPageRoute(
                             builder: (_) => OrderDetailPage(order: order)));
@@ -183,7 +181,6 @@ class _SalesPageState extends State<SalesPage> {
     final isAdmin = auth.isAdmin;
     final perms = auth.permissions;
 
-    // Muuzaji asiye na ruhusa yoyote ya mauzo
     if (!isAdmin && !perms.canRecordSales && !perms.canViewOtherSales) {
       return _LockedPage(
         title: 'Mauzo',
@@ -191,13 +188,11 @@ class _SalesPageState extends State<SalesPage> {
       );
     }
 
-    // Muuzaji anaona mauzo yake tu ikiwa hana canViewOtherSales
     final allSales = business.salesHistory;
     final myName = auth.currentUser?.name ?? 'Admin';
 
     final dateSales = allSales.where((sale) {
       final matchesDate = _isSameDay(sale.date, _selectedDate);
-      // Muuzaji anaona mauzo yake tu ikiwa hana ruhusa ya kuona ya wengine
       final matchesSeller = isAdmin || perms.canViewOtherSales
           ? true
           : sale.sellerName == myName;
@@ -228,7 +223,6 @@ class _SalesPageState extends State<SalesPage> {
         backgroundColor: Colors.white, elevation: 0,
         title: const Text('Mauzo', style: TextStyle(
             color: kNavyBlue, fontWeight: FontWeight.bold)),
-        // Muuzaji — badge ya mauzo yake tu
         actions: [
           if (!isAdmin && !perms.canViewOtherSales)
             Container(
@@ -247,7 +241,6 @@ class _SalesPageState extends State<SalesPage> {
 
       body: Column(
         children: [
-          // SEARCH + DATE
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -306,7 +299,6 @@ class _SalesPageState extends State<SalesPage> {
             ),
           ),
 
-          // FILTERS
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -319,7 +311,6 @@ class _SalesPageState extends State<SalesPage> {
             ]),
           ),
 
-          // SUMMARY
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(children: [
@@ -335,7 +326,6 @@ class _SalesPageState extends State<SalesPage> {
 
           const SizedBox(height: 12),
 
-          // LIST
           Expanded(
             child: RefreshIndicator(
               color: kNavyBlue, strokeWidth: 2.5, displacement: 20,
@@ -479,7 +469,7 @@ class _SalesPageState extends State<SalesPage> {
         ],
       ),
 
-      // FAB — inaonyeshwa kwa admin au muuzaji mwenye ruhusa ya kuuza
+      // ✅ FAB — Scan inaenda ScannerSalePage (auto-add)
       floatingActionButton: (isAdmin || perms.canRecordSales)
           ? Column(mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -493,7 +483,7 @@ class _SalesPageState extends State<SalesPage> {
                   label: const Text('Scan',
                       style: TextStyle(fontWeight: FontWeight.w600)),
                   onPressed: () => Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => const OrderPage(openScanner: true))),
+                      builder: (_) => const ScannerSalePage())),
                 ),
                 const SizedBox(height: 12),
                 FloatingActionButton.extended(
@@ -532,7 +522,6 @@ class _SalesPageState extends State<SalesPage> {
   }
 }
 
-// ===== LOCKED PAGE =====
 class _LockedPage extends StatelessWidget {
   final String title;
   final String message;

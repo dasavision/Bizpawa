@@ -6,7 +6,7 @@ import 'package:printing/printing.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
-
+import 'package:permission_handler/permission_handler.dart';
 import 'package:bizpawa/core/state/business_state.dart';
 import 'package:bizpawa/core/services/notification_service.dart';
 
@@ -104,6 +104,12 @@ class _InvoicePageState extends State<InvoicePage> {
             pw.Text('Tel: ${widget.businessPhone}',
                 style: const pw.TextStyle(fontSize: 7),
                 textAlign: pw.TextAlign.center),
+            if (widget.businessAddress.isNotEmpty) ...[
+              pw.SizedBox(height: 2),
+              pw.Text(widget.businessAddress,
+                  style: const pw.TextStyle(fontSize: 7),
+                  textAlign: pw.TextAlign.center),
+            ],
             pw.SizedBox(height: 4),
             pw.Divider(thickness: 0.5),
             pw.SizedBox(height: 2),
@@ -333,8 +339,29 @@ class _InvoicePageState extends State<InvoicePage> {
   Future<void> _scanPrinters() async {
     setState(() => _isConnecting = true);
     try {
-      final bool enabled =
-          await PrintBluetoothThermal.bluetoothEnabled;
+      // ✅ Omba permissions KWANZA kabla ya kitu kingine chochote
+      await Permission.bluetoothConnect.request();
+      await Permission.bluetoothScan.request();
+      await Permission.location.request();
+
+      // Angalia kama permissions zimepewa
+      final connectOk = await Permission.bluetoothConnect.isGranted;
+      final scanOk = await Permission.bluetoothScan.isGranted;
+
+      if (!connectOk || !scanOk) {
+        if (mounted) {
+          NotificationService.show(
+            context: context,
+            message: 'Ruhusa ya Bluetooth inahitajika. Tafadhali ruhusu.',
+            type: NotificationType.error,
+          );
+        }
+        setState(() => _isConnecting = false);
+        return;
+      }
+
+      // Angalia Bluetooth imewashwa
+      final bool enabled = await PrintBluetoothThermal.bluetoothEnabled;
       if (!enabled) {
         if (mounted) {
           NotificationService.show(
@@ -347,6 +374,7 @@ class _InvoicePageState extends State<InvoicePage> {
         return;
       }
 
+      // Pata printers zilizounganishwa
       final List<BluetoothInfo> devices =
           await PrintBluetoothThermal.pairedBluetooths;
       setState(() {
@@ -393,7 +421,6 @@ class _InvoicePageState extends State<InvoicePage> {
         expand: false,
         builder: (_, scrollController) => Column(
           children: [
-            // Handle + Header
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
               child: Column(
@@ -441,7 +468,6 @@ class _InvoicePageState extends State<InvoicePage> {
               ),
             ),
             const Divider(height: 1),
-            // Scrollable printer list
             Expanded(
               child: ListView.separated(
                 controller: scrollController,
@@ -493,7 +519,6 @@ class _InvoicePageState extends State<InvoicePage> {
   Future<void> _connectAndPrint(BluetoothInfo printer) async {
     setState(() => _isPrinting = true);
     try {
-      // Disconnect kwanza - zima connection yoyote ya zamani
       await PrintBluetoothThermal.disconnect;
       await Future.delayed(const Duration(milliseconds: 500));
 
@@ -516,11 +541,9 @@ class _InvoicePageState extends State<InvoicePage> {
       setState(() => _connectedPrinterMac = printer.macAdress);
       await _printEscPos();
 
-      // Disconnect baada ya print - printer iwe huru kwa print nyingine
       await Future.delayed(const Duration(milliseconds: 300));
       await PrintBluetoothThermal.disconnect;
       setState(() => _connectedPrinterMac = null);
-
     } catch (e) {
       if (mounted) {
         NotificationService.show(
@@ -541,15 +564,10 @@ class _InvoicePageState extends State<InvoicePage> {
 
     List<int> bytes = [];
 
-    // Init
     bytes += [0x1B, 0x40];
-
-    // Center
     bytes += [0x1B, 0x61, 0x01];
-    // Bold on
     bytes += [0x1B, 0x45, 0x01];
     bytes += _txt('${widget.businessName}\n');
-    // Bold off
     bytes += [0x1B, 0x45, 0x00];
     bytes += _txt('Tel: ${widget.businessPhone}\n');
     if (widget.businessAddress.isNotEmpty) {
@@ -557,7 +575,6 @@ class _InvoicePageState extends State<InvoicePage> {
     }
     bytes += _txt('--------------------------------\n');
 
-    // Left
     bytes += [0x1B, 0x61, 0x00];
     bytes += _txt('Order: ${order.orderNumber}\n');
     bytes += _txt(
@@ -573,7 +590,6 @@ class _InvoicePageState extends State<InvoicePage> {
     }
     bytes += _txt('--------------------------------\n');
 
-    // Items
     for (final item in order.items) {
       bytes += _txt('${item.productName}\n');
       final qty = item.unit == 'SERVICE'
@@ -609,8 +625,7 @@ class _InvoicePageState extends State<InvoicePage> {
 
     bytes += _txt('--------------------------------\n');
 
-    // QR Code
-    bytes += [0x1B, 0x61, 0x01]; // Center
+    bytes += [0x1B, 0x61, 0x01];
     final qrData = order.orderNumber.codeUnits;
     final qrDataLen = qrData.length + 3;
     bytes += [0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00];
@@ -622,7 +637,6 @@ class _InvoicePageState extends State<InvoicePage> {
     bytes += _txt('${order.orderNumber}\n');
     bytes += _txt('--------------------------------\n');
 
-    // Footer
     bytes += [0x1B, 0x45, 0x01];
     bytes += _txt('* Asante na Karibu Tena! *\n');
     bytes += [0x1B, 0x45, 0x00];
@@ -630,7 +644,6 @@ class _InvoicePageState extends State<InvoicePage> {
     bytes += _txt('Smarter Control, Stronger Growth\n');
     bytes += _txt('\n');
 
-    // Feed + cut
     bytes += [0x1B, 0x64, 0x05];
     bytes += [0x1D, 0x56, 0x41, 0x00];
 
@@ -672,8 +685,6 @@ class _InvoicePageState extends State<InvoicePage> {
       ),
       body: Column(
         children: [
-
-          // ===== RECEIPT PREVIEW =====
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -694,7 +705,6 @@ class _InvoicePageState extends State<InvoicePage> {
                   ),
                   child: Column(
                     children: [
-                      // Header
                       Text(
                         widget.businessName.toUpperCase(),
                         style: const TextStyle(
@@ -725,8 +735,6 @@ class _InvoicePageState extends State<InvoicePage> {
                       const SizedBox(height: 10),
                       const Divider(thickness: 1),
                       const SizedBox(height: 6),
-
-                      // Order info
                       Text(
                         order.orderNumber,
                         style: const TextStyle(
@@ -749,7 +757,6 @@ class _InvoicePageState extends State<InvoicePage> {
                       const SizedBox(height: 8),
                       const Divider(thickness: 0.5),
                       const SizedBox(height: 6),
-
                       _row('Muuzaji:', order.sellerName),
                       if (order.customerName != null &&
                           order.customerName!.isNotEmpty) ...[
@@ -764,8 +771,6 @@ class _InvoicePageState extends State<InvoicePage> {
                       const SizedBox(height: 8),
                       const Divider(thickness: 0.5),
                       const SizedBox(height: 6),
-
-                      // Items header
                       Row(
                         children: const [
                           Expanded(
@@ -794,10 +799,9 @@ class _InvoicePageState extends State<InvoicePage> {
                         ],
                       ),
                       const Divider(thickness: 0.3),
-
-                      // Items
                       ...order.items.map((item) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 3),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -808,7 +812,8 @@ class _InvoicePageState extends State<InvoicePage> {
                                       child: Text(item.productName,
                                           style: const TextStyle(
                                               fontSize: 10,
-                                              fontWeight: FontWeight.w600)),
+                                              fontWeight:
+                                                  FontWeight.w600)),
                                     ),
                                     Expanded(
                                       flex: 2,
@@ -816,7 +821,8 @@ class _InvoicePageState extends State<InvoicePage> {
                                         item.unit == 'SERVICE'
                                             ? '${item.quantity}'
                                             : '${item.quantity} ${item.unit}',
-                                        style: const TextStyle(fontSize: 10),
+                                        style: const TextStyle(
+                                            fontSize: 10),
                                         textAlign: TextAlign.center,
                                       ),
                                     ),
@@ -841,11 +847,8 @@ class _InvoicePageState extends State<InvoicePage> {
                               ],
                             ),
                           )),
-
                       const Divider(thickness: 0.3),
                       const SizedBox(height: 4),
-
-                      // Totals
                       _row('Jumla Ndogo:',
                           'Tshs ${_fmt(subtotal)} /='),
                       if (order.discount > 0) ...[
@@ -866,8 +869,6 @@ class _InvoicePageState extends State<InvoicePage> {
                       const SizedBox(height: 8),
                       const Divider(thickness: 0.5),
                       const SizedBox(height: 6),
-
-                      // Payment
                       _row(
                         'Malipo:',
                         order.paid ? 'IMELIPWA' : 'HAIJALIPIWA',
@@ -880,7 +881,6 @@ class _InvoicePageState extends State<InvoicePage> {
                         _row('Njia:',
                             _paymentMethodName(order.paymentMethod)),
                       ],
-
                       if (order.note != null &&
                           order.note!.isNotEmpty) ...[
                         const SizedBox(height: 8),
@@ -894,10 +894,7 @@ class _InvoicePageState extends State<InvoicePage> {
                           ),
                         ),
                       ],
-
                       const SizedBox(height: 16),
-
-                      // QR Code
                       QrImageView(
                         data: order.orderNumber,
                         version: QrVersions.auto,
@@ -918,11 +915,9 @@ class _InvoicePageState extends State<InvoicePage> {
                             fontSize: 9,
                             color: Colors.grey.shade500),
                       ),
-
                       const SizedBox(height: 16),
                       const Divider(thickness: 0.5),
                       const SizedBox(height: 8),
-
                       const Text(
                         '★  Asante na Karibu Tena!  ★',
                         style: TextStyle(
@@ -940,11 +935,9 @@ class _InvoicePageState extends State<InvoicePage> {
                             color: Colors.grey.shade500),
                         textAlign: TextAlign.center,
                       ),
-
                       const SizedBox(height: 12),
                       const Divider(thickness: 0.5),
                       const SizedBox(height: 6),
-
                       Text(
                         'Powered by BizPawa',
                         style: TextStyle(
@@ -967,24 +960,19 @@ class _InvoicePageState extends State<InvoicePage> {
               ),
             ),
           ),
-
-          // ===== BUTTONS =====
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             color: Colors.white,
             child: Column(
               children: [
-
-                // PRINT BLUETOOTH
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _isPrinting || _isConnecting
-                              ? Colors.grey.shade300
-                              : kNavyBlue,
+                      backgroundColor: _isPrinting || _isConnecting
+                          ? Colors.grey.shade300
+                          : kNavyBlue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1024,12 +1012,9 @@ class _InvoicePageState extends State<InvoicePage> {
                           },
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
                 Row(
                   children: [
-                    // SHARE PDF
                     Expanded(
                       child: SizedBox(
                         height: 50,
@@ -1041,7 +1026,8 @@ class _InvoicePageState extends State<InvoicePage> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          icon: const Icon(Icons.share_outlined, size: 18),
+                          icon:
+                              const Icon(Icons.share_outlined, size: 18),
                           label: const Text('Shiriki'),
                           onPressed: () async {
                             final bytes = await _buildPdfBytes();
@@ -1054,18 +1040,15 @@ class _InvoicePageState extends State<InvoicePage> {
                         ),
                       ),
                     ),
-
                     const SizedBox(width: 10),
-
-                    // DOWNLOAD PDF
                     Expanded(
                       child: SizedBox(
                         height: 50,
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.grey.shade700,
-                            side: BorderSide(
-                                color: Colors.grey.shade300),
+                            side:
+                                BorderSide(color: Colors.grey.shade300),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
