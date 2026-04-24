@@ -23,9 +23,13 @@ class ScannerCheckoutPage extends StatefulWidget {
 class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
   _PayType? _payType;
   final _discountCtrl = TextEditingController();
-  final _customerCtrl = TextEditingController();
+  final _customerNameCtrl = TextEditingController();
+  final _customerPhoneCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
-  String? _customerPhone;
+
+  // Wateja wanaooana wakati wa kutafuta
+  List<Customer> _suggestedCustomers = [];
+  bool _showSuggestions = false;
 
   String _formatCurrency(int amount) {
     return amount.toString().replaceAllMapped(
@@ -37,9 +41,42 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
   int get _subtotal =>
       widget.items.fold(0, (sum, item) => sum + item.total);
 
-  int get _discount => int.tryParse(_discountCtrl.text.replaceAll(',', '')) ?? 0;
+  int get _discount =>
+      int.tryParse(_discountCtrl.text.replaceAll(',', '')) ?? 0;
 
   int get _total => (_subtotal - _discount).clamp(0, _subtotal);
+
+  // Tafuta wateja wanaooana na jina
+  void _searchCustomers(String query, BusinessState business) {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _suggestedCustomers = [];
+        _showSuggestions = false;
+      });
+      return;
+    }
+
+    final results = business.customers
+        .where((c) =>
+            c.name.toLowerCase().contains(query.toLowerCase()) ||
+            (c.phone.contains(query)))
+        .toList();
+
+    setState(() {
+      _suggestedCustomers = results;
+      _showSuggestions = results.isNotEmpty;
+    });
+  }
+
+  // Chagua mteja kutoka list
+  void _selectCustomer(Customer customer) {
+    setState(() {
+      _customerNameCtrl.text = customer.name;
+      _customerPhoneCtrl.text = customer.phone;
+      _suggestedCustomers = [];
+      _showSuggestions = false;
+    });
+  }
 
   void _saveOrder() {
     if (_payType == null) {
@@ -51,7 +88,8 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
       return;
     }
 
-    if (_payType == _PayType.credit && _customerCtrl.text.trim().isEmpty) {
+    if (_payType == _PayType.credit &&
+        _customerNameCtrl.text.trim().isEmpty) {
       NotificationService.show(
         context: context,
         message: 'Weka jina la mteja kwa mkopo',
@@ -64,6 +102,31 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
     final auth = context.read<AuthState>();
     final sellerName = auth.currentUser?.name ?? 'Admin';
     final isPaid = _payType != _PayType.credit;
+
+    final customerName = _customerNameCtrl.text.trim().isEmpty
+        ? null
+        : _customerNameCtrl.text.trim();
+    final customerPhone = _customerPhoneCtrl.text.trim().isEmpty
+        ? null
+        : _customerPhoneCtrl.text.trim();
+
+    // ✅ Auto-add mteja kwenye customers list ukiwa na jina na simu
+    // Angalia kama mteja tayari yupo
+    if (customerName != null && customerPhone != null) {
+      final exists = business.customers.any(
+        (c) =>
+            c.name.toLowerCase() == customerName.toLowerCase() ||
+            c.phone == customerPhone,
+      );
+
+      if (!exists) {
+        business.addCustomer(Customer(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: customerName,
+          phone: customerPhone,
+        ));
+      }
+    }
 
     String? paymentMethod;
     switch (_payType) {
@@ -86,10 +149,8 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
       date: DateTime.now(),
       paid: isPaid,
       sellerName: sellerName,
-      customerName: _customerCtrl.text.trim().isEmpty
-          ? null
-          : _customerCtrl.text.trim(),
-      customerPhone: _customerPhone,
+      customerName: customerName,
+      customerPhone: customerPhone,
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
       paymentMethod: paymentMethod,
     );
@@ -97,7 +158,6 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
     HapticFeedback.heavyImpact();
     NotificationService.playScanner();
 
-    // Rudi kwenye scanner page na signal ya kukamilika
     Navigator.pop(context, true);
     Navigator.pop(context, true);
 
@@ -105,7 +165,7 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
       context: context,
       message: isPaid
           ? 'Mauzo yamehifadhiwa — ${_formatCurrency(_total)} TZS ✓'
-          : 'Deni limehifadhiwa kwa ${_customerCtrl.text.trim()}',
+          : 'Deni limehifadhiwa kwa $customerName',
       type: NotificationType.success,
     );
   }
@@ -113,13 +173,16 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
   @override
   void dispose() {
     _discountCtrl.dispose();
-    _customerCtrl.dispose();
+    _customerNameCtrl.dispose();
+    _customerPhoneCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final business = context.watch<BusinessState>();
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -131,8 +194,7 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
         ),
         title: const Text(
           'Maliza Mauzo',
-          style: TextStyle(
-              color: _kNavy, fontWeight: FontWeight.bold),
+          style: TextStyle(color: _kNavy, fontWeight: FontWeight.bold),
         ),
       ),
       body: SingleChildScrollView(
@@ -140,6 +202,7 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
             // ===== MUHTASARI WA BIDHAA =====
             Container(
               padding: const EdgeInsets.all(16),
@@ -162,22 +225,15 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
                       const Icon(Icons.receipt_outlined,
                           color: _kNavy, size: 16),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Bidhaa',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _kNavy,
-                          fontSize: 13,
-                        ),
-                      ),
+                      const Text('Bidhaa',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: _kNavy,
+                              fontSize: 13)),
                       const Spacer(),
-                      Text(
-                        '${widget.items.length} aina',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
+                      Text('${widget.items.length} aina',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey.shade500)),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -187,34 +243,26 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
                           children: [
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    item.product.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
+                                  Text(item.product.name,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13)),
                                   Text(
                                     '${item.quantity} × ${_formatCurrency(item.product.sellingPrice)} /=',
                                     style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade500,
-                                    ),
+                                        fontSize: 11,
+                                        color: Colors.grey.shade500),
                                   ),
                                 ],
                               ),
                             ),
-                            Text(
-                              '${_formatCurrency(item.total)} TZS',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: _kNavy,
-                              ),
-                            ),
+                            Text('${_formatCurrency(item.total)} TZS',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: _kNavy)),
                           ],
                         ),
                       )),
@@ -234,38 +282,16 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Punguzo (hiari)',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: _kNavy,
-                      fontSize: 13,
-                    ),
-                  ),
+                  const Text('Punguzo (hiari)',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: _kNavy,
+                          fontSize: 13)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _discountCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: '0',
-                      suffixText: 'TZS',
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            BorderSide(color: Colors.grey.shade200),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            BorderSide(color: Colors.grey.shade200),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: _kNavy),
-                      ),
-                    ),
+                    decoration: _inputDeco('0', suffixText: 'TZS'),
                     onChanged: (_) => setState(() {}),
                   ),
                 ],
@@ -284,14 +310,11 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Njia ya Malipo',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: _kNavy,
-                      fontSize: 13,
-                    ),
-                  ),
+                  const Text('Njia ya Malipo',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _kNavy,
+                          fontSize: 13)),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -309,31 +332,152 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
                   _payChipFull('Mkopo (Deni)', Icons.schedule_outlined,
                       _PayType.credit),
 
-                  // Customer field kwa mkopo
+                  // ===== MTEJA WA MKOPO =====
                   if (_payType == _PayType.credit) ...[
+                    const SizedBox(height: 16),
+                    const Divider(height: 1),
+                    const SizedBox(height: 16),
+
+                    // Label
+                    Row(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: _kNavy.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.person_outline,
+                              color: _kNavy, size: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Taarifa za Mteja',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: _kNavy,
+                                fontSize: 13)),
+                      ],
+                    ),
                     const SizedBox(height: 12),
+
+                    // Jina la mteja + suggestions
+                    Stack(
+                      children: [
+                        Column(
+                          children: [
+                            // Jina field
+                            TextField(
+                              controller: _customerNameCtrl,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: _inputDeco(
+                                'Jina la mteja...',
+                                prefixIcon: Icons.person_outline,
+                              ),
+                              onChanged: (v) =>
+                                  _searchCustomers(v, business),
+                            ),
+
+                            // Suggestions list
+                            if (_showSuggestions) ...[
+                              const SizedBox(height: 4),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                      color: Colors.grey.shade200),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black
+                                          .withValues(alpha: 0.06),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: _suggestedCustomers
+                                      .take(4)
+                                      .map((c) => ListTile(
+                                            dense: true,
+                                            leading: Container(
+                                              width: 32,
+                                              height: 32,
+                                              decoration: BoxDecoration(
+                                                color: _kNavy.withValues(
+                                                    alpha: 0.08),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  c.name[0].toUpperCase(),
+                                                  style: const TextStyle(
+                                                    color: _kNavy,
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            title: Text(c.name,
+                                                style: const TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight:
+                                                        FontWeight.w600)),
+                                            subtitle: Text(c.phone,
+                                                style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors
+                                                        .grey.shade500)),
+                                            onTap: () =>
+                                                _selectCustomer(c),
+                                          ))
+                                      .toList(),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Namba ya simu
                     TextField(
-                      controller: _customerCtrl,
-                      decoration: InputDecoration(
-                        hintText: 'Jina la mteja...',
-                        prefixIcon: const Icon(Icons.person_outline,
-                            color: _kNavy, size: 18),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide:
-                              BorderSide(color: Colors.grey.shade200),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide:
-                              BorderSide(color: Colors.grey.shade200),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: _kNavy),
-                        ),
+                      controller: _customerPhoneCtrl,
+                      keyboardType: TextInputType.phone,
+                      decoration: _inputDeco(
+                        '0712 345 678',
+                        prefixIcon: Icons.phone_outlined,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Info note
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: _kNavy.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              size: 14, color: _kNavy.withValues(alpha: 0.6)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Mteja mpya ataongezwa kwenye orodha ya wateja automatically',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: _kNavy.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -349,8 +493,7 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
               decoration: BoxDecoration(
                 color: _kNavy.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: _kNavy.withValues(alpha: 0.1)),
+                border: Border.all(color: _kNavy.withValues(alpha: 0.1)),
               ),
               child: Column(
                 children: [
@@ -362,8 +505,7 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
                       children: [
                         Text('Punguzo',
                             style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 13)),
+                                color: Colors.grey.shade600, fontSize: 13)),
                         Text(
                           '- ${_formatCurrency(_discount)} TZS',
                           style: const TextStyle(
@@ -379,21 +521,17 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'JUMLA KUBWA',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _kNavy,
-                          fontSize: 15,
-                        ),
-                      ),
+                      const Text('JUMLA KUBWA',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: _kNavy,
+                              fontSize: 15)),
                       Text(
                         '${_formatCurrency(_total)} TZS',
                         style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _kNavy,
-                          fontSize: 18,
-                        ),
+                            fontWeight: FontWeight.bold,
+                            color: _kNavy,
+                            fontSize: 18),
                       ),
                     ],
                   ),
@@ -422,9 +560,7 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
                       ? 'Chagua Njia ya Malipo'
                       : 'Hifadhi — ${_formatCurrency(_total)} TZS',
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 onPressed: _payType != null ? _saveOrder : null,
               ),
@@ -433,6 +569,31 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
             const SizedBox(height: 20),
           ],
         ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDeco(String hint,
+      {String? suffixText, IconData? prefixIcon}) {
+    return InputDecoration(
+      hintText: hint,
+      suffixText: suffixText,
+      prefixIcon: prefixIcon != null
+          ? Icon(prefixIcon, color: _kNavy, size: 18)
+          : null,
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: _kNavy),
       ),
     );
   }
@@ -448,23 +609,18 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
             color: selected ? _kNavy : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: selected ? _kNavy : Colors.grey.shade200,
-            ),
+                color: selected ? _kNavy : Colors.grey.shade200),
           ),
           child: Column(
             children: [
               Icon(icon,
-                  color: selected ? Colors.white : Colors.grey,
-                  size: 20),
+                  color: selected ? Colors.white : Colors.grey, size: 20),
               const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : Colors.grey.shade600,
-                ),
-              ),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? Colors.white : Colors.grey.shade600)),
             ],
           ),
         ),
@@ -478,33 +634,30 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
       onTap: () => setState(() => _payType = type),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: selected
               ? _kOrange.withValues(alpha: 0.1)
               : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? _kOrange : Colors.grey.shade200,
-          ),
+              color: selected ? _kOrange : Colors.grey.shade200),
         ),
         child: Row(
           children: [
             Icon(icon,
                 color: selected ? _kOrange : Colors.grey, size: 20),
             const SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: selected ? _kOrange : Colors.grey.shade600,
-                fontSize: 13,
-              ),
-            ),
+            Text(label,
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color:
+                        selected ? _kOrange : Colors.grey.shade600,
+                    fontSize: 13)),
             const Spacer(),
             if (selected)
-              const Icon(Icons.check_circle,
-                  color: _kOrange, size: 18),
+              const Icon(Icons.check_circle, color: _kOrange, size: 18),
           ],
         ),
       ),
@@ -516,15 +669,13 @@ class _ScannerCheckoutPageState extends State<ScannerCheckoutPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label,
-            style: TextStyle(
-                color: Colors.grey.shade600, fontSize: 13)),
-        Text(
-          '${_formatCurrency(amount)} TZS',
-          style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-              color: _kNavy),
-        ),
+            style:
+                TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+        Text('${_formatCurrency(amount)} TZS',
+            style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: _kNavy)),
       ],
     );
   }
