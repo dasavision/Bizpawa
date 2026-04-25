@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'business_type_page.dart';
 
 const _kNavy = Color(0xFF1B2E6B);
@@ -17,6 +19,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _phoneCtrl = TextEditingController();
   final _bizNameCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -44,7 +47,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     icon: const Icon(Icons.arrow_back, color: _kNavy),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  // Step indicator
                   Expanded(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -74,7 +76,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
 
-                      // Header
                       Container(
                         width: 48,
                         height: 48,
@@ -97,19 +98,19 @@ class _RegisterPageState extends State<RegisterPage> {
 
                       const SizedBox(height: 32),
 
-                      // Jina la Admin
                       _label('Jina Lako Kamili'),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _nameCtrl,
                         textCapitalization: TextCapitalization.words,
                         decoration: _dec('Mf. Amina Hassan', Icons.person_outline),
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Jina linahitajika' : null,
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Jina linahitajika'
+                            : null,
                       ),
 
                       const SizedBox(height: 18),
 
-                      // Namba ya Simu
                       _label('Namba ya Simu'),
                       const SizedBox(height: 8),
                       TextFormField(
@@ -140,11 +141,13 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline, size: 14, color: _kNavy.withValues(alpha: 0.6)),
+                            Icon(Icons.info_outline, size: 14,
+                                color: _kNavy.withValues(alpha: 0.6)),
                             const SizedBox(width: 6),
                             Text(
                               'Namba hii itatumika kuingia kwenye app',
-                              style: TextStyle(fontSize: 11, color: _kNavy.withValues(alpha: 0.6)),
+                              style: TextStyle(fontSize: 11,
+                                  color: _kNavy.withValues(alpha: 0.6)),
                             ),
                           ],
                         ),
@@ -152,7 +155,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
                       const SizedBox(height: 18),
 
-                      // Jina la Biashara
                       _label('Jina la Biashara'),
                       const SizedBox(height: 8),
                       TextFormField(
@@ -166,14 +168,14 @@ class _RegisterPageState extends State<RegisterPage> {
 
                       const SizedBox(height: 18),
 
-                      // Anuani ya Biashara
                       _label('Anuani ya Biashara'),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _addressCtrl,
                         textCapitalization: TextCapitalization.sentences,
                         maxLines: 2,
-                        decoration: _dec('Mf. Kigoma Mjini, Mitaa ya Mwanga', Icons.location_on_outlined).copyWith(
+                        decoration: _dec('Mf. Kigoma Mjini, Mitaa ya Mwanga',
+                            Icons.location_on_outlined).copyWith(
                           alignLabelWithHint: true,
                         ),
                         validator: (v) => v == null || v.trim().isEmpty
@@ -189,7 +191,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
                       const SizedBox(height: 36),
 
-                      // Button
                       SizedBox(
                         width: double.infinity,
                         height: 54,
@@ -202,16 +203,27 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                             elevation: 0,
                           ),
-                          onPressed: _onNext,
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text('Endelea',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                              SizedBox(width: 8),
-                              Icon(Icons.arrow_forward_rounded, size: 20),
-                            ],
-                          ),
+                          onPressed: _isLoading ? null : _onNext,
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('Endelea',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600)),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.arrow_forward_rounded, size: 20),
+                                  ],
+                                ),
                         ),
                       ),
                     ],
@@ -225,8 +237,65 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  void _onNext() {
+  Future<void> _onNext() async {
     if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final phone = _phoneCtrl.text.trim();
+      final name = _nameCtrl.text.trim();
+      final bizName = _bizNameCtrl.text.trim();
+      final address = _addressCtrl.text.trim();
+
+      // Tengeneza synthetic email kutoka namba ya simu
+      final email = '255$phone@bizpawa.app';
+
+      // Firebase Auth — unda akaunti
+      UserCredential? credential;
+      try {
+        credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email,
+          password: 'BP_${phone}_secure',
+        );
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'email-already-in-use') {
+          // Mtumiaji ameshasajili — sign in tu
+          credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: email,
+            password: 'BP_${phone}_secure',
+          );
+        } else {
+          rethrow;
+        }
+      }
+
+      // Hifadhi data Firestore
+      if (credential?.user != null) {
+        final uid = credential!.user!.uid;
+        await FirebaseFirestore.instance
+            .collection('businesses')
+            .doc(uid)
+            .set({
+          'uid': uid,
+          'ownerName': name,
+          'phone': phone,
+          'businessName': bizName,
+          'address': address,
+          'createdAt': FieldValue.serverTimestamp(),
+          'plan': 'trial',
+          'appVersion': '1.0.0',
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      debugPrint('Firebase register error: $e');
+      // Endelea hata Firebase ikifail — Hive itahifadhi locally
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    // Endelea na hatua inayofuata — kawaida
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -242,7 +311,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Widget _label(String text) => Text(
         text,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _kNavy),
+        style: const TextStyle(
+            fontSize: 13, fontWeight: FontWeight.w600, color: _kNavy),
       );
 
   InputDecoration _dec(String hint, IconData icon) => InputDecoration(
@@ -267,6 +337,7 @@ class _RegisterPageState extends State<RegisterPage> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.red),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       );
 }
