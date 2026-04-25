@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'core/state/business_state.dart';
 import 'core/state/auth_state.dart';
@@ -12,13 +13,11 @@ import 'models/stock_batch.dart';
 import 'models/app_user.dart';
 
 void main() async {
-  // Lazima iwe kabla ya runApp kwa async main
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Anzisha Hive
+  // Hive kwanza — haraka, haizuii app
   await Hive.initFlutter();
 
-  // Sajili adapters zote — kila model lazima isajiliwe
   Hive.registerAdapter(ProductAdapter());
   Hive.registerAdapter(StockBatchAdapter());
   Hive.registerAdapter(CustomerAdapter());
@@ -34,33 +33,36 @@ void main() async {
   Hive.registerAdapter(SellerPermissionsAdapter());
   Hive.registerAdapter(AppUserAdapter());
 
-  // Fungua Boxes zote — kila "droo" ya data
   await Hive.openBox<Product>('products');
   await Hive.openBox<SaleEntry>('sales');
   await Hive.openBox<Expense>('expenses');
   await Hive.openBox<Customer>('customers');
   await Hive.openBox<Supplier>('suppliers');
   await Hive.openBox<AppNote>('notes');
-  await Hive.openBox('auth');       // Box ya admin credentials
-  await Hive.openBox<AppUser>('sellers'); // Box ya wauzaji
+  await Hive.openBox('auth');
+  await Hive.openBox<AppUser>('sellers');
   await Hive.openBox('profile');
 
-  // MPYA
-final authState = AuthState();
-await authState.init();
+  final authState = AuthState();
+  await authState.init();
 
-final businessState = BusinessState();
-await businessState.init();
+  final businessState = BusinessState();
+  await businessState.init();
 
-runApp(
-  MultiProvider(
-    providers: [
-      ChangeNotifierProvider.value(value: businessState),
-      ChangeNotifierProvider.value(value: authState),
-    ],
-    child: const MyApp(),
-  ),
-);
+  // Firebase — background, HAIZUII app kuanza
+  Firebase.initializeApp().catchError((e) {
+    debugPrint('Firebase init error: $e');
+  });
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: businessState),
+        ChangeNotifierProvider.value(value: authState),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

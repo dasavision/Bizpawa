@@ -66,7 +66,8 @@ class _SplashScreenState extends State<SplashScreen>
     _textSlide = Tween<Offset>(
       begin: const Offset(0, 0.5),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _textCtrl, curve: Curves.easeOutCubic));
+    ).animate(
+        CurvedAnimation(parent: _textCtrl, curve: Curves.easeOutCubic));
     _textOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _textCtrl,
@@ -81,30 +82,41 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _logoCtrl.forward().then((_) => _textCtrl.forward());
+    _navigate();
+  }
 
-    Future.delayed(const Duration(milliseconds: 2800), () {
-      if (!mounted) return;
-      final auth = context.read<AuthState>();
-      Widget next;
-      if (auth.isLoggedIn) {
-        next = const AppShell();
-      } else if (auth.isRegistered) {
-        next = const LoginPage();
-      } else if (!auth.hasSeenOnboarding) {
-        next = const WelcomePage();
-      } else {
-        next = const LoginPage();
-      }
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => next,
-          transitionDuration: const Duration(milliseconds: 600),
-          transitionsBuilder: (_, anim, __, child) =>
-              FadeTransition(opacity: anim, child: child),
-        ),
-      );
-    });
+  Future<void> _navigate() async {
+    // Subiri minimum time + animations zimalize
+    await Future.wait([
+      Future.delayed(const Duration(milliseconds: 2800)),
+      _logoCtrl.forward(),
+    ]);
+
+    // Hakikisha widget bado ipo
+    if (!mounted) return;
+
+    final auth = context.read<AuthState>();
+    Widget next;
+
+    if (auth.isLoggedIn) {
+      next = const AppShell();
+    } else if (auth.isRegistered) {
+      next = const LoginPage();
+    } else if (!auth.hasSeenOnboarding) {
+      next = const WelcomePage();
+    } else {
+      next = const LoginPage();
+    }
+
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => next,
+        transitionDuration: const Duration(milliseconds: 600),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+      ),
+    );
   }
 
   @override
@@ -122,7 +134,6 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       body: Stack(
         children: [
-
           // ===== BACKGROUND =====
           Container(color: _kNavy),
 
@@ -185,18 +196,21 @@ class _SplashScreenState extends State<SplashScreen>
           ),
 
           // Dot grid
-          Positioned.fill(child: CustomPaint(painter: _DotGridPainter())),
+          Positioned.fill(
+            child: CustomPaint(painter: _DotGridPainter()),
+          ),
 
           // Diagonal accents
-          Positioned.fill(child: CustomPaint(painter: _DiagonalPainter())),
+          Positioned.fill(
+            child: CustomPaint(painter: _DiagonalPainter()),
+          ),
 
           // ===== CENTER CONTENT =====
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-
-                // Logo icon — animating
+                // Logo — animating
                 AnimatedBuilder(
                   animation: _logoCtrl,
                   builder: (_, __) => Opacity(
@@ -227,7 +241,6 @@ class _SplashScreenState extends State<SplashScreen>
                       opacity: _textOpacity,
                       child: Column(
                         children: [
-                          // BIZ (white) + PAWA (orange)
                           RichText(
                             text: const TextSpan(
                               children: [
@@ -254,10 +267,7 @@ class _SplashScreenState extends State<SplashScreen>
                               ],
                             ),
                           ),
-
                           const SizedBox(height: 8),
-
-                          // Tagline
                           FadeTransition(
                             opacity: _taglineOpacity,
                             child: Text(
@@ -288,7 +298,8 @@ class _SplashScreenState extends State<SplashScreen>
               builder: (_, __) => Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(3, (i) {
-                  final t = ((_dotsCtrl.value - i * 0.22) % 1.0).clamp(0.0, 1.0);
+                  final t =
+                      ((_dotsCtrl.value - i * 0.22) % 1.0).clamp(0.0, 1.0);
                   final active = t > 0.0 && t < 0.45;
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
