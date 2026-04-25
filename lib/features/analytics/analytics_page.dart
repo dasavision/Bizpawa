@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:bizpawa/core/state/business_state.dart';
 import 'package:bizpawa/core/state/auth_state.dart';
 import 'package:bizpawa/core/services/notification_service.dart';
@@ -13,6 +14,131 @@ const kOrange = Color(0xFFF5A623);
 String _fmtCurrency(int amount) {
   return amount.toString().replaceAllMapped(
     RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+}
+
+// ===== REMINDER FUNCTION =====
+Future<void> _sendDebtReminder(BuildContext context, SaleEntry sale) async {
+  final customerName = sale.customerName ?? 'Mteja';
+  final phone = sale.customerPhone;
+  final remaining = sale.remainingAmount.toString().replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',');
+  final orderNumber = sale.orderNumber;
+  final date = '${sale.date.day}/${sale.date.month}/${sale.date.year}';
+
+  final message =
+      'Habari $customerName,\n\n'
+      'Tunakukumbusha kuhusu deni lako:\n\n'
+      '🧾 Order: $orderNumber\n'
+      '📅 Tarehe: $date\n'
+      '💰 Kiasi Kilichobaki: TZS $remaining\n\n'
+      'Tafadhali lipa ili kuendelea kupata huduma zetu.\n\n'
+      'Asante sana! 🙏';
+
+  final encodedMsg = Uri.encodeComponent(message);
+
+  String? whatsappPhone;
+  if (phone != null && phone.isNotEmpty) {
+    String p = phone.replaceAll(' ', '').replaceAll('-', '');
+    if (p.startsWith('0')) p = '255${p.substring(1)}';
+    if (!p.startsWith('255')) p = '255$p';
+    whatsappPhone = p;
+  }
+
+  if (!context.mounted) return;
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(child: Container(width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 16),
+          const Text('Tuma Ukumbusho',
+              style: TextStyle(fontSize: 16,
+                  fontWeight: FontWeight.bold, color: kNavyBlue)),
+          const SizedBox(height: 4),
+          Text('Kwa: $customerName${phone != null ? ' ($phone)' : ''}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+          const SizedBox(height: 16),
+
+          if (whatsappPhone != null)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(width: 40, height: 40,
+                decoration: BoxDecoration(
+                    color: const Color(0xFF25D366).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.chat_outlined,
+                    color: Color(0xFF25D366), size: 20)),
+              title: const Text('WhatsApp',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text('Fungua mazungumzo ya WhatsApp'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final uri = Uri.parse(
+                    'whatsapp://send?phone=$whatsappPhone&text=$encodedMsg');
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Container(width: 40, height: 40,
+              decoration: BoxDecoration(
+                  color: kNavyBlue.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.sms_outlined,
+                  color: kNavyBlue, size: 20)),
+            title: const Text('SMS',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: const Text('Tuma ujumbe wa SMS'),
+            onTap: () async {
+  Navigator.pop(ctx);
+  final smsUri = Uri.parse(
+    'sms:${phone ?? ''}?body=${Uri.encodeComponent(message)}');
+  if (await canLaunchUrl(smsUri)) {
+    await launchUrl(smsUri);
+  } else {
+    await launchUrl(smsUri, mode: LaunchMode.externalApplication);
+  }
+},
+          ),
+
+          if (phone == null || phone.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Row(children: [
+                Icon(Icons.warning_amber_outlined,
+                    color: Colors.orange.shade700, size: 16),
+                const SizedBox(width: 8),
+                const Expanded(child: Text(
+                  'Mteja hana namba ya simu. Ongeza namba kwanza.',
+                  style: TextStyle(fontSize: 12),
+                )),
+              ]),
+            ),
+
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
 }
 
 class AnalyticsPage extends StatefulWidget {
@@ -44,7 +170,6 @@ class _AnalyticsPageState extends State<AnalyticsPage>
     final isAdmin = auth.isAdmin;
     final perms = auth.permissions;
 
-    // Determine which tabs to show
     final canSeeExpenses = isAdmin || perms.canRecordExpenses ||
         perms.canViewExpenseReport;
     final canSeeDebts = isAdmin || perms.canViewAllDebts ||
@@ -89,7 +214,6 @@ class _AnalyticsPageState extends State<AnalyticsPage>
   }
 }
 
-// ===== LOCKED TAB =====
 class _LockedTab extends StatelessWidget {
   final IconData icon;
   final String message;
@@ -113,7 +237,6 @@ class _LockedTab extends StatelessWidget {
   }
 }
 
-// ===== MATUMIZI TAB =====
 class _MatumiziTab extends StatefulWidget {
   final bool isAdmin;
   final SellerPermissions perms;
@@ -173,7 +296,6 @@ class _MatumiziTabState extends State<_MatumiziTab> {
     final auth = context.watch<AuthState>();
     final myName = auth.currentUser?.name ?? 'Admin';
 
-    // Muuzaji anaona matumizi yake tu ikiwa hana canViewOtherExpenses
     final expenses = widget.isAdmin || widget.perms.canViewOtherExpenses
         ? business.expensesList
         : business.expensesList
@@ -205,7 +327,6 @@ class _MatumiziTabState extends State<_MatumiziTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
 
-                // Muuzaji — badge ya matumizi yake tu
                 if (!widget.isAdmin && !widget.perms.canViewOtherExpenses)
                   Container(
                     width: double.infinity,
@@ -226,7 +347,6 @@ class _MatumiziTabState extends State<_MatumiziTab> {
                     ]),
                   ),
 
-                // SUMMARY CARDS
                 Row(children: [
                   _SummaryCard(title: 'Leo',
                       value: '${_fmtCurrency(business.todayExpenses)} TZS',
@@ -243,7 +363,6 @@ class _MatumiziTabState extends State<_MatumiziTab> {
 
                 const SizedBox(height: 20),
 
-                // FAIDA HALISI — inaonyeshwa tu kwa admin au mwenye ruhusa
                 if (widget.isAdmin || widget.perms.canViewProfitAnalytics)
                   Container(
                     width: double.infinity,
@@ -295,7 +414,6 @@ class _MatumiziTabState extends State<_MatumiziTab> {
                 if (widget.isAdmin || widget.perms.canViewProfitAnalytics)
                   const SizedBox(height: 20),
 
-                // MATUMIZI KWA KATEGORIA
                 if (cats.isNotEmpty) ...[
                   const Text('Matumizi kwa Aina', style: TextStyle(
                       fontSize: 15, fontWeight: FontWeight.bold,
@@ -350,7 +468,6 @@ class _MatumiziTabState extends State<_MatumiziTab> {
                   const SizedBox(height: 20),
                 ],
 
-                // HISTORIA YA MATUMIZI
                 const Text('Historia ya Matumizi', style: TextStyle(
                     fontSize: 15, fontWeight: FontWeight.bold, color: kNavyBlue)),
                 const SizedBox(height: 12),
@@ -450,7 +567,6 @@ class _MatumiziTabState extends State<_MatumiziTab> {
           ),
         ),
 
-        // FAB — inaonyeshwa kwa admin au mwenye ruhusa ya kurekodi matumizi
         if (widget.isAdmin || widget.perms.canRecordExpenses)
           Positioned(
             bottom: 24, right: 16,
@@ -500,7 +616,6 @@ class _MatumiziTabState extends State<_MatumiziTab> {
                     fontWeight: FontWeight.bold, color: kNavyBlue)),
                 const SizedBox(height: 20),
 
-                // TAREHE
                 GestureDetector(
                   onTap: () async {
                     final picked = await showDatePicker(
@@ -525,7 +640,6 @@ class _MatumiziTabState extends State<_MatumiziTab> {
                 ),
                 const SizedBox(height: 14),
 
-                // AINA
                 GestureDetector(
                   onTap: () => _showCategorySheet(context, business, setModal,
                       (cat) => selectedCategory = cat),
@@ -558,7 +672,6 @@ class _MatumiziTabState extends State<_MatumiziTab> {
                 ),
                 const SizedBox(height: 14),
 
-                // KIASI
                 const Text('Kiasi', style: TextStyle(fontSize: 13,
                     fontWeight: FontWeight.w600, color: kNavyBlue)),
                 const SizedBox(height: 6),
@@ -580,7 +693,6 @@ class _MatumiziTabState extends State<_MatumiziTab> {
                 ),
                 const SizedBox(height: 14),
 
-                // MAELEZO
                 GestureDetector(
                   onTap: () => setModal(() => showNote = !showNote),
                   child: Container(
@@ -656,7 +768,6 @@ class _MatumiziTabState extends State<_MatumiziTab> {
                         category: selectedCategory!,
                         amount: amount,
                         date: selectedDate,
-                        // Hifadhi jina la muuzaji aliyerekodi
                         recordedBy: auth.currentUser?.name ?? 'Admin',
                         note: noteController.text.trim().isEmpty
                             ? null : noteController.text.trim(),
@@ -781,7 +892,6 @@ class _MadeniTab extends StatelessWidget {
     final auth = context.watch<AuthState>();
     final myName = auth.currentUser?.name ?? 'Admin';
 
-    // Muuzaji anaona madeni ya mauzo yake tu ikiwa hana ruhusa ya kuona yote
     final debts = business.salesHistory.where((s) {
       if (s.paid) return false;
       if (isAdmin || perms.canViewAllDebts) return true;
@@ -802,13 +912,11 @@ class _MadeniTab extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            // Badge kwa muuzaji
             if (!isAdmin && !perms.canViewAllDebts)
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   color: const Color(0xFF7C3AED).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
@@ -818,12 +926,10 @@ class _MadeniTab extends StatelessWidget {
                       size: 14, color: Color(0xFF7C3AED)),
                   const SizedBox(width: 6),
                   const Text('Unaona madeni ya mauzo yako tu',
-                      style: TextStyle(fontSize: 12,
-                          color: Color(0xFF7C3AED))),
+                      style: TextStyle(fontSize: 12, color: Color(0xFF7C3AED))),
                 ]),
               ),
 
-            // JUMLA
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -877,6 +983,7 @@ class _MadeniTab extends StatelessWidget {
   }
 }
 
+// ===== DEBT CARD =====
 class _DebtCard extends StatelessWidget {
   final SaleEntry sale;
   const _DebtCard({required this.sale});
@@ -970,11 +1077,7 @@ class _DebtCard extends StatelessWidget {
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
               const Spacer(),
               GestureDetector(
-                onTap: () => NotificationService.show(
-                  context: context,
-                  message: 'Mkumbusho umetumwa kwa ${sale.customerName ?? 'mteja'}',
-                  type: NotificationType.info,
-                ),
+                onTap: () => _sendDebtReminder(context, sale),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
@@ -996,6 +1099,7 @@ class _DebtCard extends StatelessWidget {
   }
 }
 
+// ===== SUMMARY CARD =====
 class _SummaryCard extends StatelessWidget {
   final String title;
   final String value;
