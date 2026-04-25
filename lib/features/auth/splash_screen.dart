@@ -81,18 +81,19 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    _logoCtrl.forward().then((_) => _textCtrl.forward());
-    _navigate();
+    // ✅ FIX — animations zinaenda kwa mpangilio sahihi
+    // _navigate() haifanyi forward() tena
+    _logoCtrl.forward().then((_) {
+      _textCtrl.forward().then((_) {
+        _navigate();
+      });
+    });
   }
 
   Future<void> _navigate() async {
-    // Subiri minimum time + animations zimalize
-    await Future.wait([
-      Future.delayed(const Duration(milliseconds: 2800)),
-      _logoCtrl.forward(),
-    ]);
+    // Subiri sekunde moja zaidi ili tagline ionekane vizuri
+    await Future.delayed(const Duration(milliseconds: 1000));
 
-    // Hakikisha widget bado ipo
     if (!mounted) return;
 
     final auth = context.read<AuthState>();
@@ -134,10 +135,8 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // ===== BACKGROUND =====
           Container(color: _kNavy),
 
-          // Orange diagonal block — top right
           Positioned(
             top: -size.height * 0.06,
             right: -size.width * 0.08,
@@ -153,7 +152,6 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
 
-          // Navy circle overlap on orange
           Positioned(
             top: size.height * 0.08,
             right: -size.width * 0.12,
@@ -167,7 +165,6 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
 
-          // Orange accent bottom left
           Positioned(
             bottom: -size.width * 0.18,
             left: -size.width * 0.12,
@@ -181,7 +178,6 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
 
-          // Small orange circle mid left
           Positioned(
             top: size.height * 0.38,
             left: size.width * 0.06,
@@ -195,22 +191,19 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
 
-          // Dot grid
           Positioned.fill(
             child: CustomPaint(painter: _DotGridPainter()),
           ),
 
-          // Diagonal accents
           Positioned.fill(
             child: CustomPaint(painter: _DiagonalPainter()),
           ),
 
-          // ===== CENTER CONTENT =====
+          // CENTER CONTENT
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Logo — animating
                 AnimatedBuilder(
                   animation: _logoCtrl,
                   builder: (_, __) => Opacity(
@@ -232,7 +225,6 @@ class _SplashScreenState extends State<SplashScreen>
 
                 const SizedBox(height: 24),
 
-                // BIZPAWA text + tagline
                 AnimatedBuilder(
                   animation: _textCtrl,
                   builder: (_, __) => SlideTransition(
@@ -288,7 +280,7 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
 
-          // ===== LOADING DOTS bottom =====
+          // LOADING DOTS
           Positioned(
             bottom: 50,
             left: 0,

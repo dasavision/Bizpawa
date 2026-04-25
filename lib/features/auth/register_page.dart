@@ -271,22 +271,21 @@ class _RegisterPageState extends State<RegisterPage> {
       }
 
       // Hifadhi data Firestore
-      if (credential?.user != null) {
-        final uid = credential!.user!.uid;
-        await FirebaseFirestore.instance
-            .collection('businesses')
-            .doc(uid)
-            .set({
-          'uid': uid,
-          'ownerName': name,
-          'phone': phone,
-          'businessName': bizName,
-          'address': address,
-          'createdAt': FieldValue.serverTimestamp(),
-          'plan': 'trial',
-          'appVersion': '1.0.0',
-        }, SetOptions(merge: true));
-      }
+      // Hifadhi data Firestore
+final uid = credential.user!.uid;
+await FirebaseFirestore.instance
+    .collection('businesses')
+    .doc(uid)
+    .set({
+  'uid': uid,
+  'ownerName': name,
+  'phone': phone,
+  'businessName': bizName,
+  'address': address,
+  'createdAt': FieldValue.serverTimestamp(),
+  'plan': 'trial',
+  'appVersion': '1.0.0',
+}, SetOptions(merge: true));
     } catch (e) {
       debugPrint('Firebase register error: $e');
       // Endelea hata Firebase ikifail — Hive itahifadhi locally

@@ -52,22 +52,36 @@ class _WelcomePageState extends State<WelcomePage>
   @override
   void initState() {
     super.initState();
-    _cardsCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
-    _bottomCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _cardsCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900));
+    _bottomCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 600));
 
-    _card1 = Tween<Offset>(begin: const Offset(-1.0, -1.0), end: Offset.zero).animate(
-        CurvedAnimation(parent: _cardsCtrl, curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic)));
-    _card2 = Tween<Offset>(begin: const Offset(1.0, -1.0), end: Offset.zero).animate(
-        CurvedAnimation(parent: _cardsCtrl, curve: const Interval(0.1, 0.8, curve: Curves.easeOutCubic)));
-    _card3 = Tween<Offset>(begin: const Offset(-1.0, 1.0), end: Offset.zero).animate(
-        CurvedAnimation(parent: _cardsCtrl, curve: const Interval(0.2, 0.9, curve: Curves.easeOutCubic)));
-    _card4 = Tween<Offset>(begin: const Offset(1.0, 1.0), end: Offset.zero).animate(
-        CurvedAnimation(parent: _cardsCtrl, curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic)));
+    _card1 = Tween<Offset>(begin: const Offset(-1.0, -1.0), end: Offset.zero)
+        .animate(CurvedAnimation(
+            parent: _cardsCtrl,
+            curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic)));
+    _card2 = Tween<Offset>(begin: const Offset(1.0, -1.0), end: Offset.zero)
+        .animate(CurvedAnimation(
+            parent: _cardsCtrl,
+            curve: const Interval(0.1, 0.8, curve: Curves.easeOutCubic)));
+    _card3 = Tween<Offset>(begin: const Offset(-1.0, 1.0), end: Offset.zero)
+        .animate(CurvedAnimation(
+            parent: _cardsCtrl,
+            curve: const Interval(0.2, 0.9, curve: Curves.easeOutCubic)));
+    _card4 = Tween<Offset>(begin: const Offset(1.0, 1.0), end: Offset.zero)
+        .animate(CurvedAnimation(
+            parent: _cardsCtrl,
+            curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic)));
     _cardsOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: _cardsCtrl, curve: const Interval(0.0, 0.4, curve: Curves.easeIn)));
+        CurvedAnimation(
+            parent: _cardsCtrl,
+            curve: const Interval(0.0, 0.4, curve: Curves.easeIn)));
 
-    _bottomSlide = Tween<Offset>(begin: const Offset(0, 0.6), end: Offset.zero).animate(
-        CurvedAnimation(parent: _bottomCtrl, curve: Curves.easeOutCubic));
+    _bottomSlide =
+        Tween<Offset>(begin: const Offset(0, 0.6), end: Offset.zero).animate(
+            CurvedAnimation(
+                parent: _bottomCtrl, curve: Curves.easeOutCubic));
     _bottomOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(parent: _bottomCtrl, curve: Curves.easeIn));
 
@@ -97,13 +111,28 @@ class _WelcomePageState extends State<WelcomePage>
               child: Stack(
                 children: [
                   Positioned.fill(child: Container(color: _kNavy)),
-                  Positioned(top: -40, right: -40, child: Container(width: 200, height: 200,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: _kOrange.withValues(alpha: 0.13)))),
-                  Positioned(bottom: -30, left: -30, child: Container(width: 120, height: 120,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: _kOrange.withValues(alpha: 0.08)))),
-                  Positioned.fill(child: CustomPaint(painter: _WelcomeDotPainter())),
+                  Positioned(
+                      top: -40,
+                      right: -40,
+                      child: Container(
+                          width: 200,
+                          height: 200,
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _kOrange.withValues(alpha: 0.13)))),
+                  Positioned(
+                      bottom: -30,
+                      left: -30,
+                      child: Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _kOrange.withValues(alpha: 0.08)))),
+                  Positioned.fill(
+                      child: CustomPaint(painter: _WelcomeDotPainter())),
 
-                  // Picha grid 2×2
+                  // Picha grid 2x2
                   Padding(
                     padding: const EdgeInsets.fromLTRB(14, 40, 14, 14),
                     child: AnimatedBuilder(
@@ -116,10 +145,12 @@ class _WelcomePageState extends State<WelcomePage>
                           mainAxisSpacing: 10,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          children: List.generate(4, (i) => SlideTransition(
-                            position: slides[i],
-                            child: _BizCardWidget(card: _cards[i]),
-                          )),
+                          children: List.generate(
+                              4,
+                              (i) => SlideTransition(
+                                    position: slides[i],
+                                    child: _BizCardWidget(card: _cards[i]),
+                                  )),
                         ),
                       ),
                     ),
@@ -127,17 +158,23 @@ class _WelcomePageState extends State<WelcomePage>
 
                   // Badge top center
                   Positioned(
-                    top: 10, left: 0, right: 0,
+                    top: 10,
+                    left: 0,
+                    right: 0,
                     child: Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 5),
                         decoration: BoxDecoration(
                           color: _kOrange.withValues(alpha: 0.92),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Text(
                           '✦  Trusted na Wafanyabiashara 1,000+',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _kNavy),
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: _kNavy),
                         ),
                       ),
                     ),
@@ -161,14 +198,8 @@ class _WelcomePageState extends State<WelcomePage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
 
-                          // Logo — icon + BIZPAWA text (navy mode)
-                          BizPawaLogo(
-                            fontSize: 18,
-                            iconSize: 32,
-                            letterSpacing: 2,
-                            gap: 10,
-                            lightMode: true,
-                          ),
+                          // ✅ FIX — Tumia BizPawaLogo.medium badala ya named params
+                          const BizPawaLogo.medium(),
 
                           const SizedBox(height: 16),
 
@@ -186,7 +217,10 @@ class _WelcomePageState extends State<WelcomePage>
 
                           Text(
                             'Jiunge na maelfu ya wafanyabiashara Tanzania wanaosimamia biashara zao kwa BizPawa.',
-                            style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.5),
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                                height: 1.5),
                           ),
 
                           const Spacer(),
@@ -198,17 +232,22 @@ class _WelcomePageState extends State<WelcomePage>
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _kNavy,
                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(27)),
                                 elevation: 0,
                               ),
                               onPressed: () => Navigator.pushReplacement(
                                 context,
-                                MaterialPageRoute(builder: (_) => const OnboardingPage()),
+                                MaterialPageRoute(
+                                    builder: (_) => const OnboardingPage()),
                               ),
                               child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text('Anza Safari Yako', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                  Text('Anza Safari Yako',
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600)),
                                   SizedBox(width: 8),
                                   Icon(Icons.arrow_forward_rounded, size: 20),
                                 ],
@@ -224,17 +263,23 @@ class _WelcomePageState extends State<WelcomePage>
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: _kNavy,
-                                side: BorderSide(color: _kNavy.withValues(alpha: 0.18)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(23)),
+                                side: BorderSide(
+                                    color: _kNavy.withValues(alpha: 0.18)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(23)),
                               ),
                               onPressed: () {
-                                context.read<AuthState>().completeOnboarding();
+                                context
+                                    .read<AuthState>()
+                                    .completeOnboarding();
                                 Navigator.pushReplacement(
                                   context,
-                                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                                  MaterialPageRoute(
+                                      builder: (_) => const LoginPage()),
                                 );
                               },
-                              child: const Text('Nina Akaunti Tayari', style: TextStyle(fontSize: 14)),
+                              child: const Text('Nina Akaunti Tayari',
+                                  style: TextStyle(fontSize: 14)),
                             ),
                           ),
 
@@ -269,39 +314,67 @@ class _BizCardWidget extends StatelessWidget {
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => Container(
               color: _kNavy.withValues(alpha: 0.3),
-              child: Center(child: Text(card.title[0],
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: card.accent))),
+              child: Center(
+                  child: Text(card.title[0],
+                      style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: card.accent))),
             ),
           ),
           Positioned(
-            bottom: 0, left: 0, right: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
             child: Container(
               height: 70,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [Colors.black.withValues(alpha: 0.75), Colors.transparent],
+                  colors: [
+                    Colors.black.withValues(alpha: 0.75),
+                    Colors.transparent
+                  ],
                 ),
               ),
             ),
           ),
           Positioned(
-            bottom: 10, left: 10, right: 10,
+            bottom: 10,
+            left: 10,
+            right: 10,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(card.title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text(card.location, style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.6))),
+                Text(card.title,
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                Text(card.location,
+                    style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.white.withValues(alpha: 0.6))),
               ],
             ),
           ),
-          Positioned(top: 8, right: 8, child: Container(width: 8, height: 8,
-              decoration: BoxDecoration(color: card.accent, shape: BoxShape.circle))),
-          Positioned.fill(child: Container(decoration: BoxDecoration(
+          Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                      color: card.accent, shape: BoxShape.circle))),
+          Positioned.fill(
+              child: Container(
+                  decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 0.5),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1), width: 0.5),
           ))),
         ],
       ),
@@ -312,7 +385,9 @@ class _BizCardWidget extends StatelessWidget {
 class _WelcomeDotPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final p = Paint()..color = Colors.white.withValues(alpha: 0.04)..style = PaintingStyle.fill;
+    final p = Paint()
+      ..color = Colors.white.withValues(alpha: 0.04)
+      ..style = PaintingStyle.fill;
     const sp = 20.0;
     for (double x = 0; x < size.width; x += sp) {
       for (double y = 0; y < size.height; y += sp) {
@@ -320,6 +395,7 @@ class _WelcomeDotPainter extends CustomPainter {
       }
     }
   }
+
   @override
   bool shouldRepaint(_) => false;
 }

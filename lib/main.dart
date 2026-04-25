@@ -51,8 +51,9 @@ void main() async {
 
   // Firebase — background, HAIZUII app kuanza
   Firebase.initializeApp().catchError((e) {
-    debugPrint('Firebase init error: $e');
-  });
+  debugPrint('Firebase init error: $e');
+  return Firebase.apps.first;
+});
 
   runApp(
     MultiProvider(

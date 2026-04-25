@@ -1,24 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// ================================================================
-/// BizPawaLogo — Widget inayotumika kila mahali kwenye app
-///
-/// Matumizi:
-///   BizPawaLogo()                    // default
-///   BizPawaLogo(fontSize: 32)        // kubwa (splash)
-///   BizPawaLogo(fontSize: 14)        // ndogo (top bar)
-///   BizPawaLogo(iconSize: 40)        // icon tu bila text
-///   BizPawaLogo(showText: false)     // icon peke yake
-///   BizPawaLogo(lightMode: true)     // kwenye background nyeupe
-/// ================================================================
-
 class BizPawaLogo extends StatelessWidget {
   final double fontSize;
   final double iconSize;
   final double letterSpacing;
   final double gap;
   final bool showText;
-  final bool lightMode; // true = text inakuwa navy+orange, false = white+orange
+  final bool lightMode;
 
   const BizPawaLogo({
     super.key,
@@ -30,7 +18,7 @@ class BizPawaLogo extends StatelessWidget {
     this.lightMode = false,
   });
 
-  // Icon peke yake (kwenye top bar ndogo, app icon)
+  // Icon peke yake
   const BizPawaLogo.iconOnly({
     super.key,
     this.iconSize = 32,
@@ -40,7 +28,7 @@ class BizPawaLogo extends StatelessWidget {
         showText = false,
         lightMode = false;
 
-  // Kubwa — kwa splash screen
+  // Kubwa — splash screen
   const BizPawaLogo.splash({super.key})
       : fontSize = 34,
         iconSize = 72,
@@ -49,15 +37,16 @@ class BizPawaLogo extends StatelessWidget {
         showText = true,
         lightMode = false;
 
-  // Medium — kwa login/welcome
-  const BizPawaLogo.medium({super.key, this.lightMode = true})
+  // Medium — login/welcome ✅ FIXED
+  const BizPawaLogo.medium({super.key})
       : fontSize = 26,
         iconSize = 44,
         letterSpacing = 1.5,
         gap = 12,
-        showText = true;
+        showText = true,
+        lightMode = true;
 
-  // Ndogo — kwa top bar
+  // Ndogo — top bar
   const BizPawaLogo.small({super.key})
       : fontSize = 13,
         iconSize = 28,
@@ -72,7 +61,7 @@ class BizPawaLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // ===== LOGO ICON =====
+        // LOGO ICON
         Image.asset(
           'assets/logo.png',
           width: iconSize,
@@ -80,7 +69,7 @@ class BizPawaLogo extends StatelessWidget {
           fit: BoxFit.contain,
         ),
 
-        // ===== TEXT =====
+        // TEXT
         if (showText) ...[
           SizedBox(width: gap),
           RichText(
@@ -92,8 +81,8 @@ class BizPawaLogo extends StatelessWidget {
                     fontSize: fontSize,
                     fontWeight: FontWeight.bold,
                     color: lightMode
-                        ? const Color(0xFF1B2E6B)   // navy kwenye bg nyeupe
-                        : Colors.white,              // white kwenye bg navy/dark
+                        ? const Color(0xFF1B2E6B)
+                        : Colors.white,
                     letterSpacing: letterSpacing,
                     height: 1,
                   ),
@@ -103,7 +92,7 @@ class BizPawaLogo extends StatelessWidget {
                   style: TextStyle(
                     fontSize: fontSize,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFFF5A623), // orange/gold daima
+                    color: const Color(0xFFF5A623),
                     letterSpacing: letterSpacing,
                     height: 1,
                   ),
